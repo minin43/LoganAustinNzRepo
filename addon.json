@@ -1,0 +1,11 @@
+{
+    "title"     :   "What are we calling it?",
+    "type"      :   "map",
+    "tags"      :   [ "fun", "realism" ],
+    "ignore"    :   
+    [
+        "*.psd",
+        "*.vcproj",
+        "*.svn*"
+    ]
+}
