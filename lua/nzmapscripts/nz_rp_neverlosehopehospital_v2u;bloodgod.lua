@@ -192,34 +192,9 @@ local gascans = nzItemCarry:CreateCategory("gascan")
 			self:RegisterEntity(ent)
 		end
 	end)
-	gascans:SetDropFunction(function(self, ply )
-		--Must keep track of held & dropped gas cans, so on map reset the gas cans are removed properly
-		for num, tab in pairs(gascanspawns) do
-			if tab.held == ply then
-				local ent = ents.Create("nz_script_prop")
-				ent:SetModel("models/props_junk/metalgascan.mdl")
-				ent:SetPos(ply:GetPos())
-				ent:SetAngles(Angle(0, 0, 0))
-				ent:Spawn()
-				ent:DropToFloor()
-				ply:RemoveCarryItem("gascan")
-				tab.held = nil
-				ply.ent = nil
-				self:RegisterEntity(ent)
-				break
-			end
-		end
-	end)
 	gascans:SetPickupFunction(function(self, ply, ent)
-		for num, tab in pairs(gascanspawns) do
-			if tab.ent == ent then
-				ply:GiveCarryItem(self.id)
-				ent:Remove()
-				tab.held = ply
-				ply.ent = ent
-				break
-			end
-		end
+        ply:GiveCarryItem(self.id)
+        ent:Remove()
 	end)
 	gascans:SetCondition( function(self, ply)
 		return !ply:HasCarryItem("gascan")
@@ -335,10 +310,11 @@ local effigy2 = neItemCarry:CreateCategory("effigy2")
     effigy2:SetDropOnDowned(false)
     effigy2:SetShowNotification(true)
     effigy2:SetResetFunction(function(self)
+        local spawn = babyspawns[math.random(#babyspawns)]
         local ent = ents.Create("nz_script_prop")
         ent:SetModel("models/props_c17/doll01.mdl")
-        ent:SetPos(Vector())
-        ent:SetAngles(Angle())
+        ent:SetPos(Vector(spawn.pos))
+        ent:SetAngles(Angle(spawn.ang))
         ent:Spawn()
         self:RegisterEntity(ent)
         for k, v in pairs(player.GetAll()) do
@@ -360,10 +336,11 @@ local effigy3 = neItemCarry:CreateCategory("effigy3")
     effigy3:SetDropOnDowned(false)
     effigy3:SetShowNotification(true)
     effigy3:SetResetFunction(function(self)
+        local spawn = paperspawns[math.random(#paperspawns)]
         local ent = ents.Create("nz_script_prop")
         ent:SetModel("models/props_junk/garbage_newspaper001a.mdl")
-        ent:SetPos(Vector())
-        ent:SetAngles(Angle())
+        ent:SetPos(Vector(spawn.pos))
+        ent:SetAngles(Angle(spawn.ang))
         ent:Spawn()
         self:RegisterEntity(ent)
         for k, v in pairs(player.GetAll()) do
@@ -385,10 +362,11 @@ local effigy4 = neItemCarry:CreateCategory("effigy4")
     effigy4:SetDropOnDowned(false)
     effigy4:SetShowNotification(true)
     effigy4:SetResetFunction(function(self)
+        local spawn = skullspawns[math.random(#skullspawns)]
         local ent = ents.Create("nz_script_prop")
         ent:SetModel("models/Gibs/HGIBS.mdl")
-        ent:SetPos(Vector())
-        ent:SetAngles(Angle())
+        ent:SetPos(Vector(spawn.pos))
+        ent:SetAngles(Angle(spawn.ang))
         ent:Spawn()
         self:RegisterEntity(ent)
         for k, v in pairs(player.GetAll()) do
@@ -492,72 +470,6 @@ function SetElectrify(ent, enable, scale)
             effecttimer = CurTime() + 0.3
         end
     end)
-end
-
---This function is only ever ran with electricity being on
-function ZapZombies(vec1, vec2, ply)
-    ents.GetMapCreatedEntity("1650"):EmitSound("misc/charge_up.ogg", 75, 100, 1, CHAN_AUTO)
-
-    timer.Simple(7.5, function()
-        for _, info in pairs(zapRoomEffectLocations[2]) do
-            local effectData = EffectData()
-            effectData:SetStart(info.start)
-            effectData:SetOrigin(info.origin)
-            effectData:SetMagnitude( 0.75 )
-            util.Effect("lightning_strike", effectData)
-        end
-
-		for _, ent in pairs(ents.FindInBox(vec1, vec2)) do
-			if ent:IsValidZombie() or ent:IsPlayer() then
-				--Do zombie effect
-				timer.Simple(0.2, function()
-					if IsValid(ent) then
-						local insta = DamageInfo()
-						insta:SetAttacker(ply)
-						insta:SetDamageType(DMG_MISSILEDEFENSE)
-						insta:SetDamage(ent:Health())
-						ent:TakeDamageInfo(insta)
-						mapscript.bloodGodKills = math.Approach(mapscript.bloodGodKills, mapscript.bloodGodKillsGoal, 1) --This  counts players too
-					end
-				end)
-			end
-        end
-        
-        timer.Simple(2, function()
-            StopGeneratorHumm()
-			nzElec:Reset()
-			ents.GetMapCreatedEntity("2767"):Fire("Use") --Turn generator room lights off
-			--Play some "backup power enabled" sound? Should explain why there's lights
-            for k, v in pairs(player.GetAll()) do
-                v:ChatPrint("Building power offline, resorting to backup generators...")
-            end
-
-			timer.Simple(2, function()
-				net.Start("UpdateBloodCount")
-					net.WriteInt(math.Clamp(mapscript.bloodGodKills, 0, mapscript.bloodGodKillsGoal), 16)
-				net.Broadcast()
-
-				if mapscript.bloodGodKills >= mapscript.bloodGodKillsGoal then
-                    timer.Simple(5, function()
-                        CompletedBloodGod()
-                    end)
-				end
-			end)
-		end)
-	end)
-end
-
---Runs special logic when the blood god easter egg is finished
-function CompletedBloodGod()
-    net.Start("RunSound")
-        net.WriteString("misc/evilgiggle.ogg")
-        net.WriteInt(130, 8)
-    net.Broadcast()
-
-    net.Start("RunCoward")
-    net.Broadcast()
-
-    --Probably wanna spawn some enemy
 end
 
 --This function teleports the player to the given pos with the given angle after a possible delay, and plays HUD and sound effects on the client
@@ -698,189 +610,13 @@ function mapscript.OnGameBegin()
     end )
 
     --Creates spooky noises to play from radios
-    timer.Create("RadioSounds", math.random(25, 50), 0, function()
+    timer.Create("RadioSounds", math.random(35, 50), 0, function()
         local sounds = {"numbers", "numbers2", "numbers3", "static", "static1", "static2", "whispers"}
 		local soundToPlay = "radio sounds/" .. sounds[math.random(#sounds)] .. ".ogg"
 		for k, v in pairs(radiosByID) do
 			ents.GetMapCreatedEntity(v):EmitSound(soundToPlay, 90)
 		end
     end)
-
-    --Basement soul catcher
-    --[[local soulcatcher = ents.Create("nz_script_soulcatcher")
-    soulcatcher:SetNoDraw(true)
-    soulcatcher:SetPos(Vector(-3586, 717, -3570.5))
-    soulcatcher:SetAngles(Angle(-90, -90, 180))
-    soulcatcher:SetModel("models/props_combine/combine_smallmonitor001.mdl") --models/hunter/blocks/cube025x025x025.mdl
-    soulcatcher:Spawn() -- Spawn before setting variables or they'll become the default
-    soulcatcher:SetTargetAmount(20)
-    soulcatcher:SetRange(500)
-    soulcatcher:SetReleaseOverride(function(self, z)
-        if self.CurrentAmount >= self.TargetAmount then return end
-        
-        local e = EffectData()
-        e:SetOrigin(self:GetPos())
-        e:SetStart(z:GetPos())
-        e:SetMagnitude(0.3)
-        util.Effect("lightning_strike", e)
-        self.CurrentAmount = self.CurrentAmount + 1
-        self:CollectSoul()
-    end)
-    soulcatcher:SetCompleteFunction(function(self)
-        soulcatcher.ent:Remove()
-        local ent = ents.Create("nz_script_prop")
-
-        if soulcatcher.type == "carbatt" then
-            ent:SetModel("models/items/car_battery01.mdl")
-            ent:SetPos(Vector(-3587.8, 705.5, -3552.9))
-            ent:SetAngles(Angle(0, 0, 0))
-            ent:Spawn()
-            carbatt:RegisterEntity(ent)
-        else
-            ent:SetModel("models/items/battery.mdl")
-            ent:SetPos(Vector(-3587.0, 699.5, -3564.5))
-            ent:SetAngles(Angle(90, -90, 180))
-            ent:Spawn()
-            combatt:RegisterEntity(ent)
-        end
-
-        ent.OnUsed = function(but, ply)
-            soulcatcher.active = false
-            soulcatcher.type = ""
-
-            soulcatcher:SetNWString("NZText", "Consumes souls of the damned")
-            soulcatcher:SetNWString("NZHasText", "Press E to insert car battery")
-            soulcatcher:SetNWString("NZHas2Text", "Press E to insert combine battery")
-        end
-        
-        soulcatcher:SetEnabled(false)
-        soulcatcher.CurrentAmount = 0
-    end)
-    soulcatcher:SetCondition(function(self, z, dmg)
-        return self.Active or false
-    end)
-    soulcatcher:SetEnabled(false)
-    soulcatcher:SetNWString("NZText", "Consumes souls of the damned")
-    soulcatcher:SetNWString("NZRequiredItem", "carbatt")
-    soulcatcher:SetNWString("NZHasText", "Press E to insert car battery")
-    soulcatcher:SetNWString("NZRequiredItem2", "combatt")
-    soulcatcher:SetNWString("NZHas2Text", "Press E to insert combine battery")
-    soulcatcher.OnUsed = function(self, ply)
-        if soulcatcher.active then return end
-
-        if ply:HasCarryItem("carbatt") then
-            local ent = ents.Create("nz_script_prop")
-            ent:SetModel("models/items/car_battery01.mdl")
-            ent:SetPos(Vector(-3587.8, 705.5, -3552.9))
-            ent:SetAngles(Angle(0, 0, 0))
-            ent:Spawn()
-            
-            self:SetEnabled(true)
-            soulcatcher.active = true
-            soulcatcher.type = "carbatt"
-            soulcatcher.ent = ent
-            ply:RemoveCarryItem("carbatt")
-        elseif ply:HasCarryItem("combatt") then
-            local ent = ents.Create("nz_script_prop")
-            ent:SetModel("models/items/battery.mdl")
-            ent:SetPos(Vector(-3587.0, 699.5, -3564.5))
-            ent:SetAngles(Angle(90, -90, 180))
-            ent:Spawn()
-            
-            self:SetEnabled(true)
-            soulcatcher.active = true
-            soulcatcher.type = "combatt"
-            soulcatcher.ent = ent
-            ply:RemoveCarryItem("combatt")
-        end
-
-        soulcatcher:SetNWString("NZText", "")
-        soulcatcher:SetNWString("NZHasText", "")
-        soulcatcher:SetNWString("NZHas2Text", "")
-    end]]
-
-    --The ent blocking passage after the long hallways
-    local wallBlock = ents.Create("prop_physics")
-    wallBlock:SetModel("models/hunter/plates/plate3x3.mdl")
-    wallBlock:SetPos(Vector(-3600.7, 6482.8, 120.5))
-    wallBlock:SetAngles(Angle(90, 90, 180))
-    wallBlock:SetMaterial("models/props_combine/com_shield001a")
-    wallBlock:Spawn()
-    wallBlock:GetPhysicsObject():EnableMotion(false)
-    wallBlock:StartLoopingSound("ambient/machines/combine_shield_loop3.wav")
-    --timer.Create("CombineWallEmitSound", delay, repetitions, func)
-
-    --The combine console that enables the map-spawned consoles to remove the above ent blocking passage
-    --[[mapscript.onLockdown = true
-    local comConsole = ents.Create("nz_script_prop")
-    comConsole:SetModel("models/props_combine/combine_interface001.mdl")
-    comConsole:SetPos(Vector(-7224.5, 2712.6, -0.2))
-    comConsole:SetAngles(Angle(-0.0, 90.0, -0.0))
-    comConsole:SetNWString("NZText", "Power must be on")
-    comConsole:Spawn()
-    comConsole.OnUsed = function()
-        if mapscript.onLockdown and nzElec:IsOn() then
-            comConsole:EmitSound("buttons/combine_button1.wav")
-            mapscript.onLockdown = false
-            comConsole:SetNWString("NZText", "")
-            for k, v in ipairs(mapscript.consoleButtons) do
-                ents.GetMapCreatedEntity(v):SetNWString("NZText", "Press E to further rescind building system lockdown")
-            end
-        else
-            --Play failed sound
-        end
-    end
-    mapscript.CombineConsole = comConsole]]
-
-    --Combine console after the poison hall
-    --[[ents.GetMapCreatedEntity(2956):Fire("Lock")
-    ents.GetMapCreatedEntity(2957):Fire("Lock")
-    local comConsole2 = ents.Create("nz_script_prop")
-    comConsole2:SetModel("models/props_combine/combine_interface002.mdl")
-    comConsole2:SetPos(Vector(-6316.681641, 8991.398438, 64.343864))
-    comConsole2:SetAngles(Angle(0.000, -90.000, 0.000))
-    comConsole2:SetNWString("NZText", "Interface console missing power source")
-    comConsole2:Spawn()
-    comConsole2.OnUsed = function()
-        if comConsole2.canuse then
-            nzDoors:OpenLinkedDoors("b7")
-            --Play some sound
-            ents.GetMapCreatedEntity(2956):Fire("Unlock")
-            ents.GetMapCreatedEntity(2957):Fire("Unlock")
-            ents.GetMapCreatedEntity(2956):Fire("Use")
-            ents.GetMapCreatedEntity(2957):Fire("Use")
-            timer.Simple(0.1, function()
-                ents.GetMapCreatedEntity(2956):Fire("Lock")
-                ents.GetMapCreatedEntity(2957):Fire("Lock")
-            end)
-        end
-    end]]
-
-    --"Battery accepter" part of the combine console, where ccombatt gets placed
-    --[[local cc2power = ents.Create("nz_script_prop")
-    cc2power:SetModel("models/props_combine/combine_emitter01.mdl")
-    cc2power:SetPos(Vector(-6250.773438, 9016.844727, 118.433113))
-    cc2power:SetAngles(Angle(-90.000, -90.000, 180.000))
-    cc2power:SetNWString("NZText", "Attach a power source here")
-    cc2power:SetNWString("NZRequiredItem", "ccombatt")
-    cc2power:SetNWString("NZHasText", "Press E to attach power source")
-    cc2power:Spawn()
-    cc2power.OnUsed = function(self, ply)
-        if ply:HasCarryItem("ccombatt") then
-            --Play some sound
-            ply:RemoveCarryItem("ccombatt")
-
-            local ent = ents.Create("nz_script_prop")
-            ent:SetModel("models/items/battery.mdl")
-            ent:SetPos(Vector(-6250.675781, 8991.291992, 122.254921))
-            ent:SetAngles(Angle(-90.000, 90.000, 180.000))
-            ent:Spawn()
-
-            comConsole2.canuse = true
-            comConsole2:SetNWString("NZText", "Press E to open the adjacent doors")
-            cc2power:SetNWString("NZText", "")
-        end
-    end]]
 
     --Lock & apply text to the basement elevator
     local elDoor1 = ents.GetMapCreatedEntity("1825")
@@ -909,57 +645,84 @@ function mapscript.OnGameBegin()
     --Door to the power room, that doesn't seem to want to lock via door buy settings
     ents.GetMapCreatedEntity("1746"):Fire("Lock")
 
-    --Creates the padlock required to unlock to access power & zap rooms
-    local padlock = ents.Create("prop_physics")
-    padlock:SetPos(Vector(-1066.5, 2811.75, 38.9))
-    padlock:SetAngles(Angle(0, 180, 0))
-    padlock:SetModel("models/props_wasteland/prison_padlock001a.mdl")
-    padlock:SetNWString("NZText", "Locked, find a key")
-    padlock:SetNWString("NZRequiredItem", "key")
-    padlock:SetNWString("NZHasText", "Press E to unlock the padlock")
-    padlock:Spawn()
-    padlock:Activate()
-    padlock:GetPhysicsObject():EnableMotion(false)
-    padlock.OnUsed = function(ent, ply)
+    --Reused on both the padlock and the door for both padlock-door sets
+    function PadlockOnUseFunction(ent, ply, doorId)
         if ply:HasCarryItem("key") then
             ply:RemoveCarryItem("key")
             --Play unlock sound
             timer.Simple(0, function() --Length of the sound
-                padlock:SetModel("models/props_wasteland/prison_padlock001b.mdl")
-                padlock:GetPhysicsObject():EnableMotion(true)
-                padlock:GetPhysicsObject():ApplyForceCenter(Vector(0, 0, 0))
-                padlock:SetCollisionGroup(COLLISION_GROUP_WORLD)
-                padlock:SetNWString("NZText", "")
+                if ent:GetClass() == "prop_physics" then
+                    ent:SetModel("models/props_wasteland/prison_padlock001b.mdl")
+                    ent:GetPhysicsObject():EnableMotion(true)
+                    ent:GetPhysicsObject():ApplyForceCenter(Vector(0, 0, 0))
+                    ent:SetCollisionGroup(COLLISION_GROUP_WORLD)
+                    ent:SetNWString("NZText", "")
 
-                local door = ents.GetMapCreatedEntity("1567")
-                door:Fire("Unlock")
-                door:Fire("Use")
-                --door:Fire("Lock")
-                door.OnUsed = function(but, ply)
-                    timer.Simple(0, function()
-                        but:Fire("Lock")
-                    end)
+                    local door = ents.GetMapCreatedEntity(doorId)
+                    door:Fire("Unlock")
+                    door:Fire("Use")
+                    --door:Fire("Lock")
+                    door.OnUsed = function(but, ply)
+                        timer.Simple(0, function()
+                            but:Fire("Lock")
+                        end)
+                    end
+                else
+                    ent:Fire("Unlock")
+                    ent:Fire("Use")
+                    --ent:Fire("Lock")
+                    ent.OnUsed = function(but, ply)
+                        timer.Simple(0, function()
+                            but:Fire("Lock")
+                        end)
+                    end
                 end
 
-                nzDoors:OpenLinkedDoors("Padlock")
+                if doorId == 1567 then
+                    nzDoors:OpenLinkedDoors("Padlock1") --This will need to reflect in the config!!!!
+                else
+                    nzDoors:OpenLinkedDoors("Padlock2")
+                end
             end)
         end
     end
 
-    --Sets up the blood god easter egg zap buttons
-	mapscript.bloodGodKills = 0
-	local switchOn = false
-	local killSwitch = ents.GetMapCreatedEntity("1650")
-	killSwitch.OnUsed = function(but, ply)
-        if !nzElec:IsOn() or switchOn then
-			return false
-		end
-        
-		but:EmitSound("buttons/button24.wav")
-        switchOn = true
-        ZapZombies(Vector(11, 3540, 64), Vector(-304.5, 3888, 64), ply)
-        timer.Simple(10, function() switchOn = false end)
-	end
+    --Creates the padlock required to unlock to access power room
+    local padlock1 = ents.Create("prop_physics")
+    padlock1:SetPos(Vector(-1066.5, 2811.75, 38.9))
+    padlock1:SetAngles(Angle(0, 180, 0))
+    padlock1:SetModel("models/props_wasteland/prison_padlock001a.mdl")
+    padlock1:SetNWString("NZText", "Locked, find a key")
+    padlock1:SetNWString("NZRequiredItem", "key")
+    padlock1:SetNWString("NZHasText", "Press E to unlock the padlock")
+    padlock1:Spawn()
+    padlock1:Activate()
+    padlock1:GetPhysicsObject():EnableMotion(false)
+    padlock1.OnUsed = function(ent, ply)
+        PadlockOnUseFunction(ent, ply, 1567)
+    end
+    local padlock1door = ents.GetMapCreatedEntity(1567)
+    padlock1door.OnUsed = function(ent, ply)
+        PadlockOnUseFunction(ent, ply, 1567)
+    end
+
+    local padlock2 = ents.Create("prop_physics")
+    padlock2:SetPos(Vector())
+    padlock2:SetAngles(Angle())
+    padlock2:SetModel("models/props_wasteland/prison_padlock001a.mdl")
+    padlock2:SetNWString("NZText", "Locked, find a key")
+    padlock2:SetNWString("NZRequiredItem", "key")
+    padlock2:SetNWString("NZHasText", "Press E to unlock the padlock")
+    padlock2:Spawn()
+    padlock2:Activate()
+    padlock2:GetPhysicsObject():EnableMotion(false)
+    padlock2.OnUsed = function(ent, ply)
+        PadlockOnUseFunction(ent, ply, 0)
+    end
+    local padlock2door = ents.GetMapCreatedEntity(0)
+    padlock2door.OnUsed = function(ent, ply)
+        PadlockOnUseFunction(ent, ply, 0)
+    end
 
     --Sets up the special functionality for the levers in the basement
     local sparkLever = ents.GetMapCreatedEntity("1921")
@@ -1116,7 +879,7 @@ function mapscript.OnGameBegin()
             gen:EmitSound("nz/effects/gas_pour.wav")
 
             --After the gas_pour sound has played
-            timer.Simple(4, function()
+            timer.Simple(3, function()
                 if not gen then return end
                 gasDelay = false
 
@@ -1146,8 +909,8 @@ function mapscript.OnGameBegin()
                         end)
                     end)
                 else
-                    gen:SetNWString("NZText", "You must fill this generator with more gasoline to power it.")
-                    gen:SetNWString("NZHasText", "Press E to fuel this generator with gasoline.")
+                    gen:SetNWString("NZText", "The generator is currently " .. gasLevel .. "/4 full")
+                    gen:SetNWString("NZHasText", "Press E to fuel this generator with gasoline")
                 end
             end)
         end
@@ -1159,34 +922,31 @@ function mapscript.OnGameBegin()
         end
     end
 
-    --Sets up the map-spawned consoles to disable the combine wall after the long corridors
-    mapscript.consoleButtons = {"1455", "2056", "1359", pressed = 0}
-    for k, v in ipairs(mapscript.consoleButtons) do --Doesn't loop through .pressed as it's not indexed numerically
+    --Sets up the map-spawned consoles to disable "system lockdown" which re-kills power
+    mapscript.consoleButtons = {"1455", "2056", "1359", pressed = 0, ents = {}}
+    for k, v in ipairs(mapscript.consoleButtons) do
         local console = ents.GetMapCreatedEntity(v)
-        console:SetNWString("NZText", "Currently in system lockdown")
+        console:SetNWString("NZText", "Power must be activated")
         mapscript.consoleButtons[v] = false
+        table.Add(mapscript.consoleButtons.ents, console)
         console.OnUsed = function()
-            if !mapscript.onLockdown and !mapscript.consoleButtons[v] then
+            if nzElec:IsOn() and !mapscript.consoleButtons[v] then
                 mapscript.consoleButtons[v] = true
                 mapscript.consoleButtons.pressed = mapscript.consoleButtons.pressed + 1
                 console:SetNWString("NZText", "")
                 console:EmitSound("buttons/button4.wav")
-                if mapscript.consoleButtons.pressed == 3 then
+                if mapscript.consoleButtons.pressed == 2 then
                     timer.Simple(1, function()
+                        --//Should probably run a different sound. Then, we need to turn off power
                         local throwawayTab = {1, 3, 4}
                         net.Start("RunSound")
                             net.WriteString("ambient/machines/teleport" .. throwawayTab[math.random(#throwawayTab)] .. ".wav")
                         net.Broadcast()
-                        wallBlock:Remove()
                     end)
                 end
             end
         end
     end
-
-    --Reset chalk messages, just in case we're playing again after the EE step that changes them
-    net.Start("ResetChalkMessages")
-    net.Broadcast()
 
     --Reset possible battery levels after a new game
     for k, v in pairs(player.GetAll()) do
@@ -1263,7 +1023,7 @@ end
 function mapscript.ElectricityOn()
     if !postFirstActivation then
         for k, v in pairs(player.GetAll()) do
-            v:ChatPrint("Building power enabled, disabling backup generators...")
+            v:ChatPrint("Building power enabled, system lockdown under effect...")
         end
 
         local colorEditor = ents.FindByClass("edit_color")[1]
@@ -1273,8 +1033,9 @@ function mapscript.ElectricityOn()
             colorEditor:SetContrast(contrastScale)
         end)
 
-        --ents.GetMapCreatedEntity("2767"):Fire("Use")
-        mapscript.CombineConsole:SetNWString("NZText", "Press E to begin rescinding building system lockdown")
+        for k, v in pairs(mapscript.consoleButtons.ents) do
+            v:SetNWString("NZText", "Press E to rescind system lockdown")
+        end
 
 		timer.Simple(5, function()
             local fakeSwitch, fakeLever = ents.Create("nz_script_prop"), ents.Create("nz_script_prop")
@@ -1410,13 +1171,6 @@ hook.Add("PlayerUse", "PreventPull", function(ply, button)
     end
 end)
 
-hook.Add("OnZombieKilled", "OnBossDeath", function()
-    --probably gonna need to do a bunch more stuff here
-
-    net.Start("DeleteChalkMessages")
-    net.Broadcast()
-end)
-
 --[[    Overwritten Functions    ]]
 
 --Overwrites default function, enables the "disabling" of spawns, used when players enter a different area
@@ -1459,48 +1213,16 @@ Useful EE function:
 	nzNotifications:PlaySound("")
 	nzRound:Freeze(true) --Prevents switching and spawning
 
-    Some notes:
-    Config work:
-    - Some walls, barricades, and props can be jumped over/on top of, need to finish placing wall blocks
-    - Color editor needs to grayscale
-
     Script work:
     - CleanupZombies works incorrectly if you leave & re-enter the same area ID (no it's not? Don't know why it didn't work before)
     - Sound should play when unlocking padlock
     - Sound should play when picking up extra batteries
-    - Should have players turn on the generator BEFORE turning on power, they find the keys in the teleport room, but the combine console is disabled because power's off
-        - Generator humm? 
-    - Combine doorway should emit a sound on loop: ambient/machines/combine_shield_loop3.wav
     - Lightning effect may not work properly on MAP-SPAWNED entities, potential work-around: just use the ent's position and don't set an ent, or recreate the ent but set it invisible
         Or maybe scale needs to be -1? Check zet's code...
 
     Nav work:
     - Zombies get stuck in "shower"-like area
-    - Large groups of zombies getting consistently stuck in doorways
-        - Might be worth it to force zombie nocollide?
-        - Zombies specifically get stuck in zap rooms
 
     Theory work:
-    - Need more EE shit for after the long poison hallways
-        - The ZapZombies buttons could be unlocked with some interactable by the Widow's Wine half of the map
-            - It should also have steps that build up to it
-            - This forces the ZapZombies step to be the FINAL step before the Boss spawn
-    - There's too much back-and-forth
-    - Basement levers should have some sort of hint
-        - Argument: it takes too long to guess-and-check
     - Spawning a boss
-        - Could spawn in the far end of the map, and moves through it, creating no-enter zones as he moves through it (forcing players towards the widow's wine area)
         - ent:SetSequence() - Sets an animation on a model
-        - Needs to be a threat, somehow, that players should want to get rid of
-    - Laby feedback:
-        - The levers in the basement should hint that they're effecting the teleporting
-        - Didn't realize the zap room was what killed zombies, or what he needed to do (zap room could include some wall text)
-        - There should be a kill box in the vents area where you can fall into water
-        - Hard to distinguish between hallways (landmarks to identify hallways/rooms by)
-        - Suggests an RE boss
-        - Wall hint at the end of the poison hallway, he got stuck
-
-    My feelings against giving too many hints:
-        Alot of the earliest easter egg events/triggers were really secretive and not hand-hold-y, and that's the feeling I'm trying to emulate. I want the players to struggle
-        and really have to try and figure out what the fuck to do.
-]]
