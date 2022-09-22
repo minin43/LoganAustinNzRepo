@@ -11,6 +11,35 @@ util.AddNetworkString("ResetChalkMessages")
 util.AddNetworkString("DeleteChalkMessages")
 util.AddNetworkString("RunCoward")
 
+--[[
+    Easter egg
+    "Some say a demon haunts the floors of this accursed hospital, preying on the hopes of the lost souls who wander there. Do you dare enter it, and find out yourself?
+    Perhaps a way to vanquish it lie within its stone walls, trapped between the screams of the unyielding and undead."
+
+    1. No power, power switch is locked behind the destructible wall
+        a. Flavor text indicating its destructability
+        b. Access to hallway is locked by key findable in speed cola buy area
+    2. Elevator to basement is powered separately, need to fill a generator with gas cans
+        a. Flavor text should update indicating how much it's been filled with (1/4, 2/4, 3/4)
+        b. Spot 1 is in power area, spot 2 is in the buy area to the right of spawn elevator, spot 3 is somewhere in spawn area
+            or in first buy area, spot 4 is in the buy area to the left of spawn elevator
+    3. Once power is reactivated, the building "consoles" can be interacted with to disable building lockdown
+        a. First console is the in the first buy area, second console is in the basement
+    4. Once the consoles have been activated, power once again dies in the building, but it can be restored by the backup
+        generator, which teleports the player when used, and unlocks the first door to the poison hallway
+        a. The generator has 2 lights above it which relate to the lights triggered by the switches in the basement.
+            The correct switches (one, the other, or both) have to be pulled to match what's shown in the generator room in order
+            to reach the PaP area.
+        b. The backup generator area is unlocked by a set of keys found in the basement (only one of those double doors opens)
+        c. The players must PaP at least one gun to break the padlock locking the final door to the poison hallway
+    5. The players must then make it through the winding hallways of the inner hospital, finding effigy parts throughout each buy area
+        a. One or some parts (doll?) are found earlier on
+    6. Players must construct the boss effigy in a build table, and then ignite the effigy (explosion damage will do the trick too)
+        to draw out the boss. Once the effigy is burned, the boss spawns and the game enters round infinity
+    7. The boss has a lot of health but takes double damage from explosives and fire. Once the boss dies, players can escape through
+        the tunnel at the very end of the map.
+]]
+
 --[[    Post script-load work    ]]
 
 local mapscript = {}
@@ -26,19 +55,35 @@ local gascanspawns = {
         {pos = Vector(-693.2, 3046.3, 13.9), ang = Angle(-0, 87.8, 0)}, --In the un-barricaded operating room
         {pos = Vector(-1923.25, 3534.25, 15.25), ang = Angle(0, 106, 0)} --By AR-15 wallbuy
     },
-    --[[{ --Can 2, found in the bathroom & beyond areas
-        {pos = Vector(-3972.647949, 2598.693848, 15.330338), ang = Angle(0, -180, 0)}, --In bathroom
-        {pos = Vector(-5784.763184, 2332.365723, 260.4929), ang = Angle(-89.5, -146, -57.5)}, --In "vent" area
-        {pos = Vector(-6958.002930, 3406.063477, 13.222458), ang = Angle(-35.5, 89.1, 0)} --In the teleport-only area
-    },]]
-    { --Can 3, found before or after the long hallways
-        {pos = Vector(-2822.691406, 2577.959961, 14.340928), ang = Angle(-0.000, -0.440, 0.000)},
-        {pos = Vector(-3575.974854, 2580.693359, 13.587985), ang = Angle(0.453, -17.249, 0.216)},
-        --{pos = Vector(-3664.124512, 7118.309570, 76.736771), ang = Angle(-21.987, -47.260, -1.129)}
+    { --Can 2, found in spawn and first-buy areas
+        {pos = Vector(-2181.088623, 468.324829, 15.435638), ang = Angle(-0.501, -179.562, 0.401)}, --Outside
+        {pos = Vector(-2665.829590, 981.737122, 15.617842), ang = Angle(-22.630, 179.775, 0.053)}, --Hallway to first building console
+        {pos = Vector(-1996.276123, 1646.433960, 15.805776), ang = Angle(-20.024, 127.682, -0.00)} --In the construction room with the generator
+    },
+    { --Can 3, found before poison hallway
+        {pos = Vector(-4042.156494, 2299.571289, 15.327369), ang = Angle(0.005, -89.606, -0.010)}, --End of the shower hallway
+        {pos = Vector(-2820.499756, 2997.671387, 15.176751), ang = Angle(-0.042, 179.939, -0.001)}, --Corner of Speed Cola room
+        {pos = Vector(-3244.239990, 2709.144775, 15.417276), ang = Angle(-28.406, -103.495, 0.216)} --Dark corner of multiple-bed room
     },
     { --Can 4, found behind the destructible wall
         {pos = Vector(-1521.962036, 3592.954590, 12.954604), ang = Angle(-30.518, 93.740, -1.926)}
     }
+}
+
+local babyspawns = {
+    {pos = Vector(-4175.835938, 5322.623047, 66.900337), ang = Angle(-28.771, -163.458, 88.214)}, --Utility room
+    {pos = Vector(-4557.794434, 6429.033203, 85.221519), ang = Angle(-30.306, 14.718, 82.847)}, --On the bench
+    {pos = Vector(-4739.419922, 7701.262695, 112.092331), ang = Angle(56.154, -87.995, -88.512)} --In the trash can
+}
+local skullspawns = {
+    {pos = Vector(-5463.068848, 7131.594238, 107.016449), ang = Angle(3.375, 72.139, 0.339)}, --On the operating table
+    {pos = Vector(-6125.040527, 7802.763672, 67.052742), ang = Angle(3.238, 178.112, 0.279)}, --Between the benches
+    {pos = Vector(-6760.770508, 9302.520508, 111.466789), ang = Angle(5.118, 39.262, 0.718)} --In the trash can
+}
+local paperspawns = {
+    {pos = Vector(-6424.794922, 10043.782227, 106.180504), ang = Angle(1.038, -37.129, 0.345)}, --On operating table
+    {pos = Vector(-4267.633301, 9975.561523, 114.061790), ang = Angle(0.573, 172.451, -0.351)}, --On counter
+    {pos = Vector(-4969.188965, 10526.915039, 82.693443), ang = Angle(0.835, 145.076, -0.326)} --In boss spawn room
 }
 
 --Batteries
@@ -105,7 +150,7 @@ local areasByVector = {
 
 --Possible spots players may teleport to on power generator flippage
 local possibleTeleports = {
-    { --Blocked-off area teleport (otherwise inaccessible)
+    { --Inaccessible teleport area (default initial TP spot unless PaP order is correct)
       --Must default to this when neither switch has been flipped, so the player isn't teleported outside a purchased area
 		{pos = Vector(-6751.75, 3268.5, 0), ang = Angle(0, -180, 0), post = true}
 	},
@@ -126,18 +171,6 @@ local possibleTeleports = {
 local spawnTeleport = {pos = Vector(-2367, 12, 0), ang = Angle(0, 90, 0)}
 
 local radiosByID = {"1456", "2144", "1403"}
-
---[[local carbatteryspawns = {
-    {pos = Vector(-2901.3, 1491.2, -3578), ang = Angle(-0.298, -7.827, -0.088)},
-    {pos = Vector(-2892.7, 76.7, -3578), ang = Angle(-0.300, 16.855, -0.049)},
-    {pos = Vector(-5198.2, 729.8, -3578), ang = Angle(-0.493, -155.484, -0.084)},
-}
-
-local combinebatteryspawns = {
-    {pos = Vector(-4523.8, 5373.8, 77.4), ang = Angle(-1.443, 47.361, 91.156)},
-    {pos = Vector(-4733.6, 7696.6, 111.1), ang = Angle(0.864, 66.956, -90.419)},
-    {pos = Vector(-5544.6, 7202.0, 99.9), ang = Angle(1.856, -0.262, -8.516)},
-}]]
 
 local gascans = nzItemCarry:CreateCategory("gascan")
 	gascans:SetIcon("spawnicons/models/props_junk/metalgascan.png") --spawnicons/models/props_junk/gascan001a.png
@@ -248,10 +281,16 @@ local key = nzItemCarry:CreateCategory("key")
     key:SetResetFunction(function(self)
 		local ent = ents.Create("nz_script_prop")
         ent:SetModel("models/zpprops/keychain.mdl")
-        ent:SetPos(Vector(-4619.8, 3686.0, -92.6))
-        ent:SetAngles(Angle(-0, -43.7, 0))
+        ent:SetPos(Vector(-3281.935791, 2072.425537, -3548.327393))
+        ent:SetAngles(Angle(5.750, 128.816, -9.700))
         ent:Spawn()
         self:RegisterEntity(ent)
+        local ent2 = ents.Create("nz_script_prop")
+        ent2:SetModel("models/zpprops/keychain.mdl")
+        ent2:SetPos(Vector(-3063.526367, 375.649017, 33.818169))
+        ent2:SetAngles(Angle(5.229, 74.363, -10.752))
+        ent2:Spawn()
+        self:RegisterEntity(ent2)
         for k, v in pairs(player.GetAll()) do
             v:RemoveCarryItem("key")
         end
@@ -265,107 +304,105 @@ local key = nzItemCarry:CreateCategory("key")
 	end)
 key:Update()
 
-local carbatt = nzItemCarry:CreateCategory("carbatt") --models/items/car_battery01.mdl
-    carbatt:SetIcon("spawnicons/models/items/car_battery01.mdl")
-    carbatt:SetText("Press E to pick up the discharged car battery")
-    carbatt:SetDropOnDowned(false)
-    carbatt:SetShowNotification(true)
-    carbatt:SetResetFunction(function(self)
-        local randomchoice = math.random(#carbatteryspawns)
-		local ent = ents.Create("nz_script_prop")
-        ent:SetModel("models/items/car_battery01.mdl")
-        ent:SetPos(carbatteryspawns[randomchoice].pos)
-        ent:SetAngles(carbatteryspawns[randomchoice].ang)
+local effigy1 = neItemCarry:CreateCategory("effigy1")
+    key:SetIcon("spawnicons/models/maxofs2d/companion_doll.png")
+    key:SetText("This might come in handy later...")
+    key:SetDropOnDowned(false)
+    key:SetShowNotification(true)
+    key:SetResetFunction(function(self)
+        local ent = ents.Create("nz_script_prop")
+        ent:SetModel("models/maxofs2d/companion_doll.mdl")
+        ent:SetPos(Vector(-2185.035156, 1238.462280, 0.567021))
+        ent:SetAngles(Angle(-0.878, -135.587, 1.082))
         ent:Spawn()
         self:RegisterEntity(ent)
         for k, v in pairs(player.GetAll()) do
-            v:RemoveCarryItem("carbatt")
+            v:RemoveCarryItem("effigy1")
         end
-	end)
-	carbatt:SetPickupFunction(function(self, ply, ent)
-		ply:GiveCarryItem(self.id)
+    end)
+    key:SetPickupFunction(function(self, ply, ent)
+        ply:GiveCarryItem(self.id)
         ent:Remove()
-	end)
-	carbatt:SetCondition( function(self, ply)
-		return !ply:HasCarryItem("carbatt")
-	end)
-carbatt:Update()
+    end)
+    key:SetCondition( function(self, ply)
+        return !ply:HasCarryItem("effigy1")
+    end)
+effigy1:Update()
 
--[[local ccarbatt = nzItemCarry:CreateCategory("ccarbatt") --models/items/car_battery01.mdl
-    ccarbatt:SetIcon("spawnicons/models/items/car_battery01.mdl")
-    ccarbatt:SetText("Press E to pick up the charged car battery")
-    ccarbatt:SetDropOnDowned(false)
-    ccarbatt:SetShowNotification(true)
-    ccarbatt:SetResetFunction(function(self)
-		local ent = ents.Create("nz_script_prop")
-        ent:SetModel("models/items/car_battery01.mdl")
-        ent:SetPos(Vector(-3587.8, 705.5, -3552.9))
-        ent:SetAngles(Angle(0, 0, 0))
+local effigy2 = neItemCarry:CreateCategory("effigy2")
+    effigy2:SetIcon("spawnicons/models/props_c17/doll01.png")
+    effigy2:SetText("This might come in handy later...")
+    effigy2:SetDropOnDowned(false)
+    effigy2:SetShowNotification(true)
+    effigy2:SetResetFunction(function(self)
+        local ent = ents.Create("nz_script_prop")
+        ent:SetModel("models/props_c17/doll01.mdl")
+        ent:SetPos(Vector())
+        ent:SetAngles(Angle())
         ent:Spawn()
         self:RegisterEntity(ent)
         for k, v in pairs(player.GetAll()) do
-            v:RemoveCarryItem("ccarbatt")
+            v:RemoveCarryItem("effigy2")
         end
-	end)
-	ccarbatt:SetPickupFunction(function(self, ply, ent)
-		ply:GiveCarryItem(self.id)
+    end)
+    effigy2:SetPickupFunction(function(self, ply, ent)
+        ply:GiveCarryItem(self.id)
         ent:Remove()
-	end)
-	ccarbatt:SetCondition( function(self, ply)
-		return !ply:HasCarryItem("ccarbatt")
-	end)
-ccarbatt:Update()
+    end)
+    effigy2:SetCondition( function(self, ply)
+        return !ply:HasCarryItem("effigy2")
+    end)
+effigy2:Update()
 
-local combatt = nzItemCarry:CreateCategory("combatt") --models/items/battery.mdl
-    combatt:SetIcon("spawnicons/models/items/battery.mdl")
-    combatt:SetText("Press E to pick up the discharged combine battery")
-    combatt:SetDropOnDowned(false)
-    combatt:SetShowNotification(true)
-    combatt:SetResetFunction(function(self)
-        local randomchoice = math.random(#combinebatteryspawns)
-		local ent = ents.Create("nz_script_prop")
-        ent:SetModel("models/items/battery.mdl")
-        ent:SetPos(combinebatteryspawns[randomchoice].pos)
-        ent:SetAngles(combinebatteryspawns[randomchoice].ang)
+local effigy3 = neItemCarry:CreateCategory("effigy3")
+    effigy3:SetIcon("spawnicons/models/props_junk/garbage_newspaper001a.png")
+    effigy3:SetText("This might come in handy later...")
+    effigy3:SetDropOnDowned(false)
+    effigy3:SetShowNotification(true)
+    effigy3:SetResetFunction(function(self)
+        local ent = ents.Create("nz_script_prop")
+        ent:SetModel("models/props_junk/garbage_newspaper001a.mdl")
+        ent:SetPos(Vector())
+        ent:SetAngles(Angle())
         ent:Spawn()
         self:RegisterEntity(ent)
         for k, v in pairs(player.GetAll()) do
-            v:RemoveCarryItem("combatt")
+            v:RemoveCarryItem("effigy3")
         end
-	end)
-	combatt:SetPickupFunction(function(self, ply, ent)
-		ply:GiveCarryItem(self.id)
+    end)
+    effigy3:SetPickupFunction(function(self, ply, ent)
+        ply:GiveCarryItem(self.id)
         ent:Remove()
-	end)
-	combatt:SetCondition( function(self, ply)
-		return !ply:HasCarryItem("combatt")
-	end)
-combatt:Update()
+    end)
+    effigy3:SetCondition( function(self, ply)
+        return !ply:HasCarryItem("effigy3")
+    end)
+effigy3:Update()
 
-local ccombatt = nzItemCarry:CreateCategory("ccombatt") --models/items/battery.mdl
-    ccombatt:SetIcon("spawnicons/models/items/battery.mdl")
-    ccombatt:SetText("Press E to pick up the dead combine battery")
-    ccombatt:SetDropOnDowned(false)
-    ccombatt:SetShowNotification(true)
-    ccombatt:SetResetFunction(function(self)
-		local ent = ents.Create("nz_script_prop")
-        ent:SetModel("models/items/battery.mdl")
-        ent:SetPos(Vector(-3587.0, 699.5, -3564.5))
-        ent:SetAngles(Angle(90, -90, 180))
+local effigy4 = neItemCarry:CreateCategory("effigy4")
+    effigy4:SetIcon("spawnicons/models/Gibs/HGIBS.png")
+    effigy4:SetText("This might come in handy later...")
+    effigy4:SetDropOnDowned(false)
+    effigy4:SetShowNotification(true)
+    effigy4:SetResetFunction(function(self)
+        local ent = ents.Create("nz_script_prop")
+        ent:SetModel("models/Gibs/HGIBS.mdl")
+        ent:SetPos(Vector())
+        ent:SetAngles(Angle())
         ent:Spawn()
         self:RegisterEntity(ent)
         for k, v in pairs(player.GetAll()) do
-            v:RemoveCarryItem("ccombatt")
+            v:RemoveCarryItem("effigy4")
         end
-	end)
-	ccombatt:SetPickupFunction(function(self, ply, ent)
-		ply:GiveCarryItem(self.id)
+    end)
+    effigy4:SetPickupFunction(function(self, ply, ent)
+        ply:GiveCarryItem(self.id)
         ent:Remove()
-	end)
-	ccombatt:SetCondition( function(self, ply)
-		return !ply:HasCarryItem("ccombatt")
-	end)
-ccombatt:Update()]]
+    end)
+    effigy4:SetCondition( function(self, ply)
+        return !ply:HasCarryItem("effigy4")
+    end)
+effigy4:Update()
 
 --[[    Non-mapscript functions    ]]
 
