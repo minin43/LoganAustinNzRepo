@@ -150,25 +150,22 @@ local areasByVector = {
 
 --Possible spots players may teleport to on power generator flippage
 local possibleTeleports = {
-    { --Inaccessible teleport area (default initial TP spot unless PaP order is correct)
-      --Must default to this when neither switch has been flipped, so the player isn't teleported outside a purchased area
-		{pos = Vector(-6751.75, 3268.5, 0), ang = Angle(0, -180, 0), post = true}
+    default = {
+		{pos = Vector(-6751.75, 3268.5, 0), ang = Angle(0, -180, 0)}
 	},
-	{ --Basement teleport (essentially useless), 3 spots so it feels more genuinely random
+    pap = {
+        {pos = Vector(-2844.5, 297, -1663), ang = Angle(0, 0, 0)}
+    }
+	post = {
 		{pos = Vector(-3064, 195, -3580), ang = Angle(0, -180, 0)},
 		{pos = Vector(-5082, 724, -3582), ang = Angle(3.5 -17.5, 0)},
-		{pos = Vector(-3604, 2306.5 -3584), ang = Angle(0, -90, 0)}
-	},
-	{ --Random spots in areas that MUST have been purchased thus far (essentially useless), 3 spots again
-		{pos = Vector(-5963.5, 2369, -61.5), ang = Angle(0, 0, 0)},
+		{pos = Vector(-3392, 2641, 2), ang = Angle(0, -90, 0)},
+		{pos = Vector(-4124, 2852, 5), ang = Angle(0, 0, 0)},
 		{pos = Vector(-1825.5, 3709.75, 0.0), ang = Angle(0, -7.5, 0)},
 		{pos = Vector(-3007.5, 512.5, 0.0), ang = Angle(0, -90, 0)}
 	},
-	{ --"Bunker" area w/ PaP
-		{pos = Vector(-2844.5, 297, -1663), ang = Angle(0, 0, 0), post = true}
-	}
 }
-local spawnTeleport = {pos = Vector(-2367, 12, 0), ang = Angle(0, 90, 0)}
+local spawnTeleport = {pos = Vector(-2367, 12, 2), ang = Angle(0, 90, 0)}
 
 local radiosByID = {"1456", "2144", "1403"}
 
@@ -382,7 +379,109 @@ local effigy4 = neItemCarry:CreateCategory("effigy4")
     end)
 effigy4:Update()
 
+--IN NEED OF HEAVY UPDATING
+local buildabletbl = {
+	model = "models/weapons/w_c4.mdl",
+	pos = Vector( 10, 10, 10 ), --C4 Position, relative to the table
+	ang = Angle( 0, 0, 0 ), --C4 Angles
+	parts = {
+		[ "charged_detonator" ] = { 0, 1 },
+		[ "tire" ] = { 2 },
+		[ "nitroamine" ] = { 3 },
+		[ "blastcap" ] = { 4 }
+	},
+	usefunc = function( self, ply ) -- When it's completed and a player presses E
+		if !ply:HasCarryItem( "c4" ) then
+			ply:GiveCarryItem( "c4" )
+		end
+	end,
+	--[[partadded = function(table, id, ply) -- When a part is added (optional)
+		
+	end,
+	finishfunc = function(table) -- When all parts have been added (optional)
+		
+	end,]]
+	text = "Press E to pick up the plastic explosive."
+}
+
+local escapeDetector = ents.Create("nz_script_prop")
+escapeDetector:SetPos(Vector(-3832.5, 10583.5, 116))
+escapeDetector:SetModel("models/hunter/blocks/cube2x2x2.mdl")
+escapeDetector:SetTrigger(true) --Required for an entity to make use of StartTouch
+escapeDetector:SetNoDraw(true)
+escapeDetector:SetNotSolid(true)
+escapeDetector:Spawn()
+escapeDetector.StartTouch = MyStartTouch
+
 --[[    Non-mapscript functions    ]]
+
+--IN NEED OF HEAVY UPDATING
+local finalround = 0
+local function MyStartTouch( self, ply )
+	if not ply:IsPlayer() and not ply:Alive() then return end
+	finalround = nzRound:GetNumber()
+	local escaped, escapednames = {}, {}
+	ply:GodEnable() --Because cheeky nandos will try to break immersion by throwing explosives into the end area
+	ply:SetTargetPriority( TARGET_PRIORITY_NONE )
+	ply:Freeze( true )
+	--//It was suggested to use GetAllPlayingAndAlive, but I want to avoid spectators doing nothing waiting for game to end
+	if #player.GetAll() == 1 then
+		nzEE.Cam:QueueView( 1, nil, nil, nil, true, nil, ply ) --Fade for aesthetics
+		nzEE.Cam:QueueView( 15, Vector( -400.915161, -1325.068115, -380.741180 ), nil, Angle( 0.000, 91.500, 0.000 ), nil, nil, ply ) --Black screen
+		nzEE.Cam:Music( "nz/easteregg/motd_good.wav", ply )
+		nzEE.Cam:Text( "You escaped after ".. finalround .." rounds!", ply )
+		--nzEE.Cam:QueueView( 0, Vector(  ), nil, Angle(  ), nil, nil, ply ) --Final Scene
+		timer.Simple( 16, function()
+			nzRound:Win( "Congratulations on escaping!", false )
+			if ply:Alive() then ply:KillSilent() end
+			ply:Freeze( false )
+			ply:SetTargetPriority( TARGET_PRIORITY_PLAYER )
+		end )
+		nzEE.Cam:Begin()
+		return
+	end
+	if not timer.Exists( "EscapeTimer" ) then
+		timer.Create( "EscapeTimer", 30, 1, function()
+			nzRound:Freeze( true )
+			--//nzEE includes capability to target every player, but that leaves me without a way to target the players for Freezing and SetTargetPriority
+			--//I don't know if including every nzEE function within the k, v is more or less efficient than not
+			for k, v in pairs( player.GetAll() ) do
+				v:Freeze( true )
+				v:SetTargetPriority( TARGET_PRIORITY_NONE )
+				nzEE.Cam:QueueView( 1, nil, nil, nil, true, nil, ply ) --Fade for aesthetics
+				nzEE.Cam:QueueView( 15, Vector( -1243.480469, 668.968994, -176.465607 ), Vector( -1250.941895, -1273.481445, -164.941498 ), Angle( 0.000, -89.560, 0.000 ), true, nil, ply )
+				if not escaped[ ply ] then
+					nzEE.Cam:Music( "nz/easteregg/motd_bad.wav", ply )
+					nzEE.Cam:Text( "You did not escape the facility...", ply )
+				else
+					nzEE.Cam:Music( "nz/easteregg/motd_good.wav", ply )
+					nzEE.Cam:Text( "You escaped after ".. finalround .." rounds!", ply )
+				end
+				--[[nzEE.Cam:QueueView( 15, Vector(  ), Vector(  ), Angle(  ), true, nil, ply ) --Pan 1
+				nzEE.Cam:Text( "Escapees: " .. table.concat( escapednames, ", " ) .. ".", ply ) 
+				nzEE.Cam:QueueView( 15, Vector(  ), Vector(  ), Angle(  ), true, nil, ply ) --Pan 2
+				nzEE.Cam:Text( "Thank you for playing!", ply )
+				nzEE.Cam:QueueView( 0, Vector(  ), Vector(  ), Angle(  ), true, nil, ply ) --Final Scene]]
+			end
+			timer.Simple( 46, function() --After 20 more seconds, actually end the game
+				nzRound:Win( "Congratulations to everyone who escaped!", false )
+				for k, v in pairs( player.GetAllPlayingAndAlive() ) do
+					v:Freeze( false )
+					v:SetTargetPriority( TARGET_PRIORITY_PLAYER )
+					if v:Alive() then v:KillSilent() end
+				end
+			end )
+			timer.Destroy( "EscapeTimer" )
+		end )
+	end
+
+	nzEE.Cam:QueueView( timer.TimeLeft( "EscapeTimer" ), Vector( -400.915161, -1325.068115, -380.741180 ), nil, Angle( 0.000, 91.500, 0.000 ), true, nil, ply )
+	nzEE.Cam:Text( "Waiting for the rest of the players...", ply )
+	PrintMessage( HUD_PRINTTALK, ply:Nick() .. " has escaped the map! All remaining players have " .. math.Round( timer.TimeLeft( "EscapeTimer" ) ) .. " seconds to follow suit!" ) --This should always be 30 the first time
+	escaped[ ply ] = true --Used for logic
+	table.insert( escapednames, ply:Nick() ) --Used for the end message
+	nzEE.Cam:Begin()
+end
 
 function GetNavFlood(navArea, tab)
     for k, v in pairs(navArea:GetAdjacentAreas()) do 
@@ -577,9 +676,11 @@ function mapscript.OnGameBegin()
     battery:Reset()
     key:Reset()
 
-    --[[for k, v in pairs(player.GetAll()) do
-        v:ChatPrint("Building power offline...")
-    end]]
+    tbl = ents.Create( "buildable_table" )
+	tbl:AddValidCraft( "Plastic Explosive", buildabletbl )
+	--tbl:SetPos( Vector( -1384.457886, 971.894897, -184.897278 ) )
+	--tbl:SetAngles( Angle( 0.000, -90.000, 0.000 ) )
+	tbl:Spawn()
 
     --Spawns the initial set of batteries
     local throwawayTab = GenerateRandomSet(#batteries, #batteries / 2)
@@ -638,8 +739,10 @@ function mapscript.OnGameBegin()
     ents.GetMapCreatedEntity("1477"):SetPos(Vector(-2341, 1280, 64)) --Right door (closed position: Vector(-2341, 1280, 64))
     --Open the jail door in front of power generator room
     ents.GetMapCreatedEntity("2778"):Fire("Use")
-    --Locks the door the padlock is "attached" to
+    --Locks the associated padlocked doors
     ents.GetMapCreatedEntity("1567"):Fire("Lock")
+    ents.GetMapCreatedEntity("2591"):Fire("Lock")
+    ents.GetMapCreatedEntity("2592"):Fire("Lock")
     --Sets some flavor text for the destructable wall
     ents.GetMapCreatedEntity("1563"):SetNWString("NZText", "This part of the wall is awfully crumbly...")
     --Door to the power room, that doesn't seem to want to lock via door buy settings
@@ -707,8 +810,8 @@ function mapscript.OnGameBegin()
     end
 
     local padlock2 = ents.Create("prop_physics")
-    padlock2:SetPos(Vector())
-    padlock2:SetAngles(Angle())
+    padlock2:SetPos(Vector(-4132.473145, 2302.010010, 40.326866))
+    padlock2:SetAngles(Angle(-0.000, -90.000, -0.000))
     padlock2:SetModel("models/props_wasteland/prison_padlock001a.mdl")
     padlock2:SetNWString("NZText", "Locked, find a key")
     padlock2:SetNWString("NZRequiredItem", "key")
@@ -717,22 +820,63 @@ function mapscript.OnGameBegin()
     padlock2:Activate()
     padlock2:GetPhysicsObject():EnableMotion(false)
     padlock2.OnUsed = function(ent, ply)
-        PadlockOnUseFunction(ent, ply, 0)
+        PadlockOnUseFunction(ent, ply, 2592)
     end
-    local padlock2door = ents.GetMapCreatedEntity(0)
+    local padlock2door = ents.GetMapCreatedEntity(2592)
     padlock2door.OnUsed = function(ent, ply)
-        PadlockOnUseFunction(ent, ply, 0)
+        PadlockOnUseFunction(ent, ply, 2592)
     end
 
-    --Sets up the special functionality for the levers in the basement
+    --//Logic behind backup generator teleportation location
+    --3 options: both, just nearest, just furthest
+    local TeleportVariance = math.random(3)
+    local lightOptions = {
+        light1 = false,
+        light2 = false,
+        --Option 1: both activated/red
+        {
+            light1 = "models/props_c17/light_cagelight01_on.mdl",
+            light2 = "models/props_c17/light_cagelight01_on.mdl",
+            switch1 = true,
+            switch2 = true
+        },
+        --Option 2: furthest only
+        {
+            light1 = "models/props_c17/light_cagelight02_on.mdl",
+            light2 = "models/props_c17/light_cagelight01_on.mdl",
+            switch1 = false,
+            switch2 = true
+        },
+        --Option 3: closest only
+        {
+            light1 = "models/props_c17/light_cagelight01_on.mdl",
+            light2 = "models/props_c17/light_cagelight02_on.mdl",
+            switch1 = true,
+            switch2 = false
+        }
+    }
+
+    local light1 = ents.Create("prop_physics")
+    light1:SetPos(Vector())
+    light1:SetAngles(Angle())
+    light1:SetModel(lightOptions[TeleportVariance].light1)
+    light1:Spawn()
+    light1:Activate()
+    light1:GetPhysicsObject():EnableMotion(false)
+
+    local light2 = ents.Create("prop_physics")
+    light2:SetPos(Vector())
+    light2:SetAngles(Angle())
+    light2:SetModel(lightOptions[TeleportVariance].light2)
+    light2:Spawn()
+    light2:Activate()
+    light2:GetPhysicsObject():EnableMotion(false)
+
+    --Set up far lever (switch2)
     local sparkLever = ents.GetMapCreatedEntity("1921")
     --SetElectrify(sparkLever, true)
 	sparkLever.OnUsed = function(but, ply)
-		if !sparkFlipped then
-			sparkFlipped = true
-		else
-			sparkFlipped = false
-        end
+		lightOptions.light1 = !lightOptions.light1
 
         local throwawayTab = {1, 3, 4} --Have to do this stupid work-around since these are hl2 sounds and there's no teleport2.wav
         timer.Simple(1, function()
@@ -741,14 +885,11 @@ function mapscript.OnGameBegin()
             net.Broadcast()
         end)
 	end
+    --Near lever (switch1)
     local nonSparkLever = ents.GetMapCreatedEntity("1920")
     --SetElectrify(nonSparkLever, true)
 	nonSparkLever.OnUsed = function(but, ply)
-		if !nonSparkFlipped then
-			nonSparkFlipped = true
-		else
-			nonSparkFlipped = false
-        end
+		lightOptions.light2 = !lightOptions.light2
         
 		local throwawayTab = {1, 3, 4}
         timer.Simple(1, function()
@@ -757,12 +898,6 @@ function mapscript.OnGameBegin()
             net.Broadcast()
         end)
 	end
-
-    --Randomizes the teleport possibilities when the generator switch is flipped, both unflipped remains the same always
-	local neitherFlippedOption = table.Copy(possibleTeleports[1])
-    local bothFlippedOption = table.Copy(possibleTeleports[4])
-	local nonSparkFlippedOption = table.Copy(possibleTeleports[3])
-	local sparkFlippedOption = table.Copy(possibleTeleports[2])
 
 	--The generator power switch that teleports the player
     newPowerSwitch = ents.GetMapCreatedEntity("2767")
@@ -793,36 +928,23 @@ function mapscript.OnGameBegin()
             end)
         else
             timer.Simple(1, function()
-                --[[for k, v in pairs(player.GetAll()) do
-                    v:ChatPrint("Building power enabled, disabling backup generators...")
+                for k, v in pairs(player.GetAll()) do
+                    v:ChatPrint("Backup generator started, building power online")
                 end
-                nzElec:Activate()]]
+                nzElec:Activate()
                 StartGeneratorHumm()
             end)
         end
 
-		local teleportAgain, randomValue = false
-        if !sparkFlipped and !nonSparkFlipped then
-            randomValue = math.random(#neitherFlippedOption)
-			SpecialTeleport(ply, neitherFlippedOption[randomValue].pos, neitherFlippedOption[randomValue].ang, 1)
-			teleportAgain = true
-        elseif sparkFlipped and !nonSparkFlipped then
-            randomValue = math.random(#sparkFlippedOption)
-			SpecialTeleport(ply, sparkFlippedOption[randomValue].pos, sparkFlippedOption[randomValue].ang, 1)
-            teleportAgain = sparkFlippedOption[randomValue].post
-        elseif !sparkFlipped and nonSparkFlipped then
-            randomValue = math.random(#nonSparkFlippedOption)
-            SpecialTeleport(ply, nonSparkFlippedOption[randomValue].pos, nonSparkFlippedOption[randomValue].ang, 1)
-            teleportAgain = nonSparkFlippedOption[randomValue].post
-        else
-            randomValue = math.random(#bothFlippedOption)
-            SpecialTeleport(ply, bothFlippedOption[randomValue].pos, bothFlippedOption[randomValue].ang, 1)
-            teleportAgain = bothFlippedOption[randomValue].post
+        local reteleportTime = math.random(30, 45)
+        if lightOptions.light1 == lightOptions[TeleportVariance].light1 and lightOptions.light2 == lightOptions[TeleportVariance].light2 then
+            SpecialTeleport(ply, possibleTeleports.pap.pos, possibleTeleports.pap.ang, 1)
+            reteleportTime = math.random(45, 60)
         end
         
-        if teleportAgain then
+        timer.Simple(4, function() --Teleport HUD effects should take 4 seconds
             teleportTimers = teleportTimers or {}
-            teleportTimers[ply:SteamID()] = math.random(45, 75)
+            teleportTimers[ply:SteamID()] = reteleportTime
             net.Start("StartTeleportTimer")
                 net.WriteInt(teleportTimers[ply:SteamID()], 16)
             net.Send(ply)
@@ -844,7 +966,7 @@ function mapscript.OnGameBegin()
                     net.WriteInt(teleportTimers[ply:SteamID()], 16)
                 net.Send(ply)
             end)
-        end
+        end)
         return true
 	end
 
@@ -937,11 +1059,11 @@ function mapscript.OnGameBegin()
                 console:EmitSound("buttons/button4.wav")
                 if mapscript.consoleButtons.pressed == 2 then
                     timer.Simple(1, function()
-                        --//Should probably run a different sound. Then, we need to turn off power
                         local throwawayTab = {1, 3, 4}
                         net.Start("RunSound")
                             net.WriteString("ambient/machines/teleport" .. throwawayTab[math.random(#throwawayTab)] .. ".wav")
                         net.Broadcast()
+                        timer.Simple(1, function() nzElec:Reset())
                     end)
                 end
             end
@@ -1014,10 +1136,10 @@ function mapscript.OnRoundStart()
     ent:SetNWString("NZHasText", "Press E to add the battery to your flashlight.")
 
     --Redundantly remove the text, if a player joins in after the step as been completed
-    if mapscript.bloodGodKills >= mapscript.bloodGodKillsGoal then
+    --[[if mapscript.bloodGodKills >= mapscript.bloodGodKillsGoal then
         net.Start("RunCoward")
         net.Broadcast()
-    end
+    end]]
 end
 
 function mapscript.ElectricityOn()
