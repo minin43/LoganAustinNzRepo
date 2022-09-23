@@ -1,15 +1,9 @@
-util.AddNetworkString("RunFireOverlay")
 util.AddNetworkString("RunTeleportOverlay")
-util.AddNetworkString("StopOverlay")
-util.AddNetworkString("StartBloodCount")
-util.AddNetworkString("UpdateBloodCount")
 util.AddNetworkString("SendBatteryLevel")
 util.AddNetworkString("RunSound")
 util.AddNetworkString("StartTeleportTimer")
 util.AddNetworkString("UpdateTeleportTimer")
 util.AddNetworkString("ResetChalkMessages")
-util.AddNetworkString("DeleteChalkMessages")
-util.AddNetworkString("RunCoward")
 
 --[[
     Easter egg
@@ -38,6 +32,28 @@ util.AddNetworkString("RunCoward")
         to draw out the boss. Once the effigy is burned, the boss spawns and the game enters round infinity
     7. The boss has a lot of health but takes double damage from explosives and fire. Once the boss dies, players can escape through
         the tunnel at the very end of the map.
+
+    To-do
+    1. Effigy buildtable (including buildtable pos/ang)
+    2. Escape functionality block (including opening the door)
+    3. Still feels like the spawn system kinda jank, I must be missing some spawns
+    4. Electrify isn't working correctly? It's been disabled everywhere
+    5. Gas generator plays humming sounds but not map-spawned backup generator
+    - 6. Add a doorbuy down hallway that requires electricity only to access
+        a. Block off the extra locked-but-not-padlocked door to the shower room
+    - 7. Indication lights above backup generator lever need position/angle
+    8. Need to add sp00ky wall text everywhere to indicate clues
+        a. Only seems to work sometimes? I believe the hook is being overridden somewhere
+    9. Backup generator level pull logic needs a refresh, barely seems to work correctly
+        a. Would like to prevent the room light shutting on/off every pull
+    - 10. Need to remove PaP room console from console button list (to disabled system lockdown)
+    11. Need to replace nZ power lever with fake one after power is initially turned on
+    - 12. Need to add grayscale to config
+    13. Need to add everything boss related in
+    14. Add in Sinistar sound effects
+    15. Another round of nav script refreshing before a final nav_analyze
+    - 16. Poison hallway needs to be unlocked by map consoles before power dies
+        a. Need a second doorway that uses a padlock but can be shot open by PaP weapon, forces players to figure out the rest of the EE
 ]]
 
 --[[    Post script-load work    ]]
@@ -162,10 +178,10 @@ local possibleTeleports = {
 		{pos = Vector(-3392, 2641, 2), ang = Angle(0, -90, 0)},
 		{pos = Vector(-4124, 2852, 5), ang = Angle(0, 0, 0)},
 		{pos = Vector(-1825.5, 3709.75, 0.0), ang = Angle(0, -7.5, 0)},
-		{pos = Vector(-3007.5, 512.5, 0.0), ang = Angle(0, -90, 0)}
+		{pos = Vector(-3007.5, 512.5, 0.0), ang = Angle(0, -90, 0)},
+        {pos = Vector(-2367, 12, 2), ang = Angle(0, 90, 0)}
 	},
 }
-local spawnTeleport = {pos = Vector(-2367, 12, 2), ang = Angle(0, 90, 0)}
 
 local radiosByID = {"1456", "2144", "1403"}
 
@@ -381,19 +397,17 @@ effigy4:Update()
 
 --IN NEED OF HEAVY UPDATING
 local buildabletbl = {
-	model = "models/weapons/w_c4.mdl",
+	model = "models/maxofs2d/companion_doll.mdl",
 	pos = Vector( 10, 10, 10 ), --C4 Position, relative to the table
 	ang = Angle( 0, 0, 0 ), --C4 Angles
 	parts = {
-		[ "charged_detonator" ] = { 0, 1 },
-		[ "tire" ] = { 2 },
-		[ "nitroamine" ] = { 3 },
-		[ "blastcap" ] = { 4 }
+		[ "effigy1" ] = { 0, 1 },
+		[ "effigy2" ] = { 2 },
+		[ "effigy3" ] = { 3 },
+		[ "effigy4" ] = { 4 }
 	},
-	usefunc = function( self, ply ) -- When it's completed and a player presses E
-		if !ply:HasCarryItem( "c4" ) then
-			ply:GiveCarryItem( "c4" )
-		end
+	usefunc = function( self, ply ) -- When it's completed and a player presses 'use'
+		ply:PrintMessage(HUD_PRINTTALK, "Cannot be picked up")
 	end,
 	--[[partadded = function(table, id, ply) -- When a part is added (optional)
 		
@@ -675,9 +689,13 @@ function mapscript.OnGameBegin()
     gascans:Reset()
     battery:Reset()
     key:Reset()
+    effigy1:Reset()
+    effigy2:Reset()
+    effigy3:Reset()
+    effigy4:Reset()
 
     tbl = ents.Create( "buildable_table" )
-	tbl:AddValidCraft( "Plastic Explosive", buildabletbl )
+	tbl:AddValidCraft( "Evil Effigy", buildabletbl )
 	--tbl:SetPos( Vector( -1384.457886, 971.894897, -184.897278 ) )
 	--tbl:SetAngles( Angle( 0.000, -90.000, 0.000 ) )
 	tbl:Spawn()
@@ -737,8 +755,7 @@ function mapscript.OnGameBegin()
     ents.GetMapCreatedEntity("1493"):Fire("Lock") --Elevator ent
     ents.GetMapCreatedEntity("1478"):SetPos(Vector(-2394, 1280, 64)) --Left door (closed position: Vector(-2394, 1280, 64))
     ents.GetMapCreatedEntity("1477"):SetPos(Vector(-2341, 1280, 64)) --Right door (closed position: Vector(-2341, 1280, 64))
-    --Open the jail door in front of power generator room
-    ents.GetMapCreatedEntity("2778"):Fire("Use")
+    --ents.GetMapCreatedEntity("2778"):Fire("Use") --Jail door by backup generator
     --Locks the associated padlocked doors
     ents.GetMapCreatedEntity("1567"):Fire("Lock")
     ents.GetMapCreatedEntity("2591"):Fire("Lock")
@@ -940,6 +957,8 @@ function mapscript.OnGameBegin()
         if lightOptions.light1 == lightOptions[TeleportVariance].light1 and lightOptions.light2 == lightOptions[TeleportVariance].light2 then
             SpecialTeleport(ply, possibleTeleports.pap.pos, possibleTeleports.pap.ang, 1)
             reteleportTime = math.random(45, 60)
+        else
+            SpecialTeleport(ply, possibleTeleports.default.pos, possibleTeleports.default.ang)
         end
         
         timer.Simple(4, function() --Teleport HUD effects should take 4 seconds
@@ -955,7 +974,8 @@ function mapscript.OnGameBegin()
                 end
                 if teleportTimers[ply:SteamID()] == 0 or !ply:GetNotDowned() then
                     timer.Remove(ply:SteamID() .. "TeleportTimer")
-                    SpecialTeleport(ply, spawnTeleport.pos, spawnTeleport.ang)
+                    local randnum = math.random(#possibleTeleports.post)
+                    SpecialTeleport(ply, possibleTeleports.post[randnum].pos, possibleTeleports.post[randnum].ang)
                     net.Start("UpdateTeleportTimer")
                         net.WriteInt(0, 16)
                     net.Send(ply)
@@ -1105,9 +1125,6 @@ function mapscript.OnRoundStart()
                 mapscript.flashlightStatuses[v] = false
                 v:AllowFlashlight(false)
             end
-
-            net.Start("StartBloodCount")
-            net.Send(v)
         end
     end)
 
@@ -1134,12 +1151,6 @@ function mapscript.OnRoundStart()
     ent.charge = math.random(25, 80)
     ent:SetNWString("NZRequiredItem", "battery")
     ent:SetNWString("NZHasText", "Press E to add the battery to your flashlight.")
-
-    --Redundantly remove the text, if a player joins in after the step as been completed
-    --[[if mapscript.bloodGodKills >= mapscript.bloodGodKillsGoal then
-        net.Start("RunCoward")
-        net.Broadcast()
-    end]]
 end
 
 function mapscript.ElectricityOn()
