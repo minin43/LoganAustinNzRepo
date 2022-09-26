@@ -7,60 +7,63 @@ util.AddNetworkString("ResetChalkMessages")
 
 --[[
     Easter egg
-    "Some say a demon haunts the floors of this accursed hospital, preying on the hopes of the lost souls who wander there. Do you dare enter it, and find out yourself?
-    Perhaps a way to vanquish it lie within its stone walls, trapped between the screams of the unyielding and undead."
-
     1. No power, power switch is locked behind the destructible wall
-        a. Flavor text indicating its destructability
-        b. Access to hallway is locked by key findable in speed cola buy area
+        b. Access to hallway is locked by key findable by map console
     2. Elevator to basement is powered separately, need to fill a generator with gas cans
-        a. Flavor text should update indicating how much it's been filled with (1/4, 2/4, 3/4)
         b. Spot 1 is in power area, spot 2 is in the buy area to the right of spawn elevator, spot 3 is somewhere in spawn area
             or in first buy area, spot 4 is in the buy area to the left of spawn elevator
     3. Once power is reactivated, the building "consoles" can be interacted with to disable building lockdown
-        a. First console is the in the first buy area, second console is in the basement
     4. Once the consoles have been activated, power once again dies in the building, but it can be restored by the backup
-        generator, which teleports the player when used, and unlocks the first door to the poison hallway
-        a. The generator has 2 lights above it which relate to the lights triggered by the switches in the basement.
-            The correct switches (one, the other, or both) have to be pulled to match what's shown in the generator room in order
-            to reach the PaP area.
-        b. The backup generator area is unlocked by a set of keys found in the basement (only one of those double doors opens)
+        generator, which teleports the player when used
+        a. The generator has 2 lights above it which relate to the lights triggered by the switches in the basement. Find the
+            correct order to teleport to PaP (randomized every game - can only be 1 of 3 options)
+        b. The backup generator area is unlocked by a set of keys found in the basement
         c. The players must PaP at least one gun to break the padlock locking the final door to the poison hallway
     5. The players must then make it through the winding hallways of the inner hospital, finding effigy parts throughout each buy area
-        a. One or some parts (doll?) are found earlier on
     6. Players must construct the boss effigy in a build table, and then ignite the effigy (explosion damage will do the trick too)
         to draw out the boss. Once the effigy is burned, the boss spawns and the game enters round infinity
     7. The boss has a lot of health but takes double damage from explosives and fire. Once the boss dies, players can escape through
-        the tunnel at the very end of the map.
+        the tunnel at the very end of the map to win
 
     To-do
-    1. Effigy buildtable (including buildtable pos/ang)
+    1. Effigy buildtable
     2. Escape functionality block (including opening the door)
     3. Still feels like the spawn system kinda jank, I must be missing some spawns
     4. Electrify isn't working correctly? It's been disabled everywhere
     5. Gas generator plays humming sounds but not map-spawned backup generator
-    - 6. Add a doorbuy down hallway that requires electricity only to access
-        a. Block off the extra locked-but-not-padlocked door to the shower room
-    - 7. Indication lights above backup generator lever need position/angle
     8. Need to add sp00ky wall text everywhere to indicate clues
         a. Only seems to work sometimes? I believe the hook is being overridden somewhere
     9. Backup generator level pull logic needs a refresh, barely seems to work correctly
         a. Would like to prevent the room light shutting on/off every pull
-    - 10. Need to remove PaP room console from console button list (to disabled system lockdown)
     11. Need to replace nZ power lever with fake one after power is initially turned on
-    - 12. Need to add grayscale to config
     13. Need to add everything boss related in
     14. Add in Sinistar sound effects
     15. Another round of nav script refreshing before a final nav_analyze
-    - 16. Poison hallway needs to be unlocked by map consoles before power dies
-        a. Need a second doorway that uses a padlock but can be shot open by PaP weapon, forces players to figure out the rest of the EE
+
+    Playtest notes
+    Nav changes
+        1. Spawn area need more zombies jumping over barricades than coming through window
+            2. Zombies getting stuck on those barricades often
+            3. Zombies getting stuck on corner of tree in front of barricade
+        4. Zombies getting stuck in doorway in front of first padlock
+        5. Zombies getting stuck in bench chairs in 1st buy area
+
+    Config Changes
+        14. Should probably eliminate the need to crouch-jump to pass through the top, zombie-less area
+            15. Need to re-enable opening the gate at the end of the upper by-way or people can farm zombies from it forever
+                    (or tie opening it to enabling the spawning)
+
+    12. Padlock to shower isn't unlocking correctly
+    13. Sound effects when ending building lockdown aren't super great. Electric buzz with NO extra sound after
+            and then letting the power-down sound play by default would probably be best
+    16. Need a delay after pulling the power lever before running teleport effects
+    17. Elevator doors NEED to close (or pevent player movement through) when used
+    18. Poison hallway padlock not working correctly (not opening doors, destroying on non-PaPed weapons)
 ]]
 
 --[[    Post script-load work    ]]
 
 local mapscript = {}
-mapscript.bloodGodKills = 0
-mapscript.bloodGodKillsGoal = 10
 mapscript.batteryLevels = {}
 mapscript.flashlightStatuses = {}
 
@@ -77,7 +80,7 @@ local gascanspawns = {
         {pos = Vector(-1996.276123, 1646.433960, 15.805776), ang = Angle(-20.024, 127.682, -0.00)} --In the construction room with the generator
     },
     { --Can 3, found before poison hallway
-        {pos = Vector(-4042.156494, 2299.571289, 15.327369), ang = Angle(0.005, -89.606, -0.010)}, --End of the shower hallway
+        {pos = Vector(-3524.470703, 1966.508545, 15.162188), ang = Angle(0.000, -180, -0.00)}, --End of the shower hallway
         {pos = Vector(-2820.499756, 2997.671387, 15.176751), ang = Angle(-0.042, 179.939, -0.001)}, --Corner of Speed Cola room
         {pos = Vector(-3244.239990, 2709.144775, 15.417276), ang = Angle(-28.406, -103.495, 0.216)} --Dark corner of multiple-bed room
     },
@@ -99,7 +102,7 @@ local skullspawns = {
 local paperspawns = {
     {pos = Vector(-6424.794922, 10043.782227, 106.180504), ang = Angle(1.038, -37.129, 0.345)}, --On operating table
     {pos = Vector(-4267.633301, 9975.561523, 114.061790), ang = Angle(0.573, 172.451, -0.351)}, --On counter
-    {pos = Vector(-4969.188965, 10526.915039, 82.693443), ang = Angle(0.835, 145.076, -0.326)} --In boss spawn room
+    {pos = Vector(-5565.348145, 10309.059570, 82.686806), ang = Angle(0.830, -106.707, 0.022)} --Bench
 }
 
 --Batteries
@@ -171,7 +174,7 @@ local possibleTeleports = {
 	},
     pap = {
         {pos = Vector(-2844.5, 297, -1663), ang = Angle(0, 0, 0)}
-    }
+    },
 	post = {
 		{pos = Vector(-3064, 195, -3580), ang = Angle(0, -180, 0)},
 		{pos = Vector(-5082, 724, -3582), ang = Angle(3.5 -17.5, 0)},
@@ -180,7 +183,7 @@ local possibleTeleports = {
 		{pos = Vector(-1825.5, 3709.75, 0.0), ang = Angle(0, -7.5, 0)},
 		{pos = Vector(-3007.5, 512.5, 0.0), ang = Angle(0, -90, 0)},
         {pos = Vector(-2367, 12, 2), ang = Angle(0, 90, 0)}
-	},
+	}
 }
 
 local radiosByID = {"1456", "2144", "1403"}
@@ -273,12 +276,14 @@ local key = nzItemCarry:CreateCategory("key")
         ent:SetAngles(Angle(5.750, 128.816, -9.700))
         ent:Spawn()
         self:RegisterEntity(ent)
+
         local ent2 = ents.Create("nz_script_prop")
         ent2:SetModel("models/zpprops/keychain.mdl")
         ent2:SetPos(Vector(-3063.526367, 375.649017, 33.818169))
         ent2:SetAngles(Angle(5.229, 74.363, -10.752))
         ent2:Spawn()
         self:RegisterEntity(ent2)
+
         for k, v in pairs(player.GetAll()) do
             v:RemoveCarryItem("key")
         end
@@ -292,12 +297,12 @@ local key = nzItemCarry:CreateCategory("key")
 	end)
 key:Update()
 
-local effigy1 = neItemCarry:CreateCategory("effigy1")
-    key:SetIcon("spawnicons/models/maxofs2d/companion_doll.png")
-    key:SetText("This might come in handy later...")
-    key:SetDropOnDowned(false)
-    key:SetShowNotification(true)
-    key:SetResetFunction(function(self)
+local effigy1 = nzItemCarry:CreateCategory("effigy1")
+    effigy1:SetIcon("spawnicons/models/maxofs2d/companion_doll.png")
+    effigy1:SetText("This might come in handy later...")
+    effigy1:SetDropOnDowned(false)
+    effigy1:SetShowNotification(true)
+    effigy1:SetResetFunction(function(self)
         local ent = ents.Create("nz_script_prop")
         ent:SetModel("models/maxofs2d/companion_doll.mdl")
         ent:SetPos(Vector(-2185.035156, 1238.462280, 0.567021))
@@ -308,16 +313,16 @@ local effigy1 = neItemCarry:CreateCategory("effigy1")
             v:RemoveCarryItem("effigy1")
         end
     end)
-    key:SetPickupFunction(function(self, ply, ent)
+    effigy1:SetPickupFunction(function(self, ply, ent)
         ply:GiveCarryItem(self.id)
         ent:Remove()
     end)
-    key:SetCondition( function(self, ply)
+    effigy1:SetCondition( function(self, ply)
         return !ply:HasCarryItem("effigy1")
     end)
 effigy1:Update()
 
-local effigy2 = neItemCarry:CreateCategory("effigy2")
+local effigy2 = nzItemCarry:CreateCategory("effigy2")
     effigy2:SetIcon("spawnicons/models/props_c17/doll01.png")
     effigy2:SetText("This might come in handy later...")
     effigy2:SetDropOnDowned(false)
@@ -343,7 +348,7 @@ local effigy2 = neItemCarry:CreateCategory("effigy2")
     end)
 effigy2:Update()
 
-local effigy3 = neItemCarry:CreateCategory("effigy3")
+local effigy3 = nzItemCarry:CreateCategory("effigy3")
     effigy3:SetIcon("spawnicons/models/props_junk/garbage_newspaper001a.png")
     effigy3:SetText("This might come in handy later...")
     effigy3:SetDropOnDowned(false)
@@ -369,7 +374,7 @@ local effigy3 = neItemCarry:CreateCategory("effigy3")
     end)
 effigy3:Update()
 
-local effigy4 = neItemCarry:CreateCategory("effigy4")
+local effigy4 = nzItemCarry:CreateCategory("effigy4")
     effigy4:SetIcon("spawnicons/models/Gibs/HGIBS.png")
     effigy4:SetText("This might come in handy later...")
     effigy4:SetDropOnDowned(false)
@@ -415,7 +420,7 @@ local buildabletbl = {
 	finishfunc = function(table) -- When all parts have been added (optional)
 		
 	end,]]
-	text = "Press E to pick up the plastic explosive."
+	text = "It must burn!"
 }
 
 local escapeDetector = ents.Create("nz_script_prop")
@@ -694,10 +699,10 @@ function mapscript.OnGameBegin()
     effigy3:Reset()
     effigy4:Reset()
 
-    tbl = ents.Create( "buildable_table" )
-	tbl:AddValidCraft( "Evil Effigy", buildabletbl )
-	--tbl:SetPos( Vector( -1384.457886, 971.894897, -184.897278 ) )
-	--tbl:SetAngles( Angle( 0.000, -90.000, 0.000 ) )
+    tbl = ents.Create("buildable_table")
+	tbl:AddValidCraft("Evil Effigy", buildabletbl)
+	tbl:SetPos(Vector(-5534, 9301, 64.2))
+	tbl:SetAngles(Angle(-0.000, 90.000, 0.000 ) )
 	tbl:Spawn()
 
     --Spawns the initial set of batteries
@@ -760,48 +765,39 @@ function mapscript.OnGameBegin()
     ents.GetMapCreatedEntity("1567"):Fire("Lock")
     ents.GetMapCreatedEntity("2591"):Fire("Lock")
     ents.GetMapCreatedEntity("2592"):Fire("Lock")
+    ents.GetMapCreatedEntity("2636"):Fire("Lock")
+    ents.GetMapCreatedEntity("2635"):Fire("Lock")
     --Sets some flavor text for the destructable wall
     ents.GetMapCreatedEntity("1563"):SetNWString("NZText", "This part of the wall is awfully crumbly...")
     --Door to the power room, that doesn't seem to want to lock via door buy settings
     ents.GetMapCreatedEntity("1746"):Fire("Lock")
 
     --Reused on both the padlock and the door for both padlock-door sets
-    function PadlockOnUseFunction(ent, ply, doorId)
+    function PadlockOnUseFunction(padlock, door, ply)
+        print("PadlockOnUse debug", padlock, door, ply)
         if ply:HasCarryItem("key") then
             ply:RemoveCarryItem("key")
             --Play unlock sound
-            timer.Simple(0, function() --Length of the sound
-                if ent:GetClass() == "prop_physics" then
-                    ent:SetModel("models/props_wasteland/prison_padlock001b.mdl")
-                    ent:GetPhysicsObject():EnableMotion(true)
-                    ent:GetPhysicsObject():ApplyForceCenter(Vector(0, 0, 0))
-                    ent:SetCollisionGroup(COLLISION_GROUP_WORLD)
-                    ent:SetNWString("NZText", "")
+            timer.Simple(0, function() --Length of the sound   
+                padlock:SetModel("models/props_wasteland/prison_padlock001b.mdl")
+                padlock:GetPhysicsObject():EnableMotion(true)
+                padlock:GetPhysicsObject():ApplyForceCenter(Vector(0, 0, 0))
+                padlock:SetCollisionGroup(COLLISION_GROUP_WORLD)
+                padlock:SetNWString("NZText", "")
 
-                    local door = ents.GetMapCreatedEntity(doorId)
-                    door:Fire("Unlock")
-                    door:Fire("Use")
-                    --door:Fire("Lock")
-                    door.OnUsed = function(but, ply)
-                        timer.Simple(0, function()
-                            but:Fire("Lock")
-                        end)
-                    end
-                else
-                    ent:Fire("Unlock")
-                    ent:Fire("Use")
-                    --ent:Fire("Lock")
-                    ent.OnUsed = function(but, ply)
-                        timer.Simple(0, function()
-                            but:Fire("Lock")
-                        end)
-                    end
+                door:Fire("Unlock")
+                door:Fire("Use")
+                --door:Fire("Lock")
+                door.OnUsed = function(but, ply)
+                    timer.Simple(0, function()
+                        but:Fire("Lock")
+                    end)
                 end
 
-                if doorId == 1567 then
-                    nzDoors:OpenLinkedDoors("Padlock1") --This will need to reflect in the config!!!!
+                if door:MapCreationID() == 1567 then
+                    nzDoors:OpenLinkedDoors("a4a")
                 else
-                    nzDoors:OpenLinkedDoors("Padlock2")
+                    nzDoors:OpenLinkedDoors("b2")
                 end
             end)
         end
@@ -819,13 +815,14 @@ function mapscript.OnGameBegin()
     padlock1:Activate()
     padlock1:GetPhysicsObject():EnableMotion(false)
     padlock1.OnUsed = function(ent, ply)
-        PadlockOnUseFunction(ent, ply, 1567)
+        PadlockOnUseFunction(ent, padlock1door, ply)
     end
     local padlock1door = ents.GetMapCreatedEntity(1567)
     padlock1door.OnUsed = function(ent, ply)
-        PadlockOnUseFunction(ent, ply, 1567)
+        PadlockOnUseFunction(padlock1, ent, ply)
     end
 
+    --Padlock to poisoned shower area
     local padlock2 = ents.Create("prop_physics")
     padlock2:SetPos(Vector(-4132.473145, 2302.010010, 40.326866))
     padlock2:SetAngles(Angle(-0.000, -90.000, -0.000))
@@ -837,12 +834,43 @@ function mapscript.OnGameBegin()
     padlock2:Activate()
     padlock2:GetPhysicsObject():EnableMotion(false)
     padlock2.OnUsed = function(ent, ply)
-        PadlockOnUseFunction(ent, ply, 2592)
+        PadlockOnUseFunction(ent, padlock2door, ply)
     end
     local padlock2door = ents.GetMapCreatedEntity(2592)
     padlock2door.OnUsed = function(ent, ply)
-        PadlockOnUseFunction(ent, ply, 2592)
+        PadlockOnUseFunction(padlock2, ent, ply)
     end
+
+    local padlock3 = ents.Create("prop_physics")
+    padlock3:SetPos(Vector(-3771.5, 3643, 41))
+    padlock3:SetAngles(Angle(-0.000, -90.000, 0.000))
+    padlock3:SetModel("models/props_wasteland/prison_padlock001a.mdl")
+    padlock3:SetNWString("NZText", "Tough looking padlock, could probably destroy it with a powerful enough weapon")
+    padlock2:SetNWString("NZRequiredItem", "key")
+    padlock2:SetNWString("NZHasText", "Key doesn't seem to fit this padlock")
+    padlock3:Spawn()
+    padlock3:Activate()
+    padlock3:GetPhysicsObject():EnableMotion(false)
+    padlock3.OnTakeDamage = function( self, dmginfo )
+        print(self, dmginfo)
+		if not dmginfo or not dmginfo:GetAttacker():IsPlayer() then return end
+		local wep = dmginfo:GetAttacker():GetActiveWeapon()
+        print("wep: ", wep)
+		if not IsValid(wep) or not wep:HasNZModifier("pap") then return end
+        print("padlock debug", IsValid(wep), wep:HasNZModifier("pap"))
+		padlock3:EmitSound("physics/metal/metal_box_break2.wav")
+		local door = ents.GetMapCreatedEntity("2636")
+        door:Fire("Unlock")
+        door:Fire("Use")
+        --door:Fire("Lock")
+        door.OnUsed = function(but, ply)
+            timer.Simple(0, function()
+                but:Fire("Lock")
+            end)
+        end
+		padlock3:Remove()
+        nzDoors:OpenLinkedDoors("b3")
+	end
 
     --//Logic behind backup generator teleportation location
     --3 options: both, just nearest, just furthest
@@ -874,16 +902,16 @@ function mapscript.OnGameBegin()
     }
 
     local light1 = ents.Create("prop_physics")
-    light1:SetPos(Vector())
-    light1:SetAngles(Angle())
+    light1:SetPos(Vector(-4927, 4271.5, -12))
+    light1:SetAngles(Angle(0.000, -0.000, 0.000))
     light1:SetModel(lightOptions[TeleportVariance].light1)
     light1:Spawn()
     light1:Activate()
     light1:GetPhysicsObject():EnableMotion(false)
 
     local light2 = ents.Create("prop_physics")
-    light2:SetPos(Vector())
-    light2:SetAngles(Angle())
+    light2:SetPos(Vector(-4927, 4354.5, -12))
+    light2:SetAngles(Angle(0.000, -0.000, 0.000))
     light2:SetModel(lightOptions[TeleportVariance].light2)
     light2:Spawn()
     light2:Activate()
@@ -920,6 +948,7 @@ function mapscript.OnGameBegin()
     newPowerSwitch = ents.GetMapCreatedEntity("2767")
     mapscript.NewPowerSwitch = newPowerSwitch
     newPowerSwitch.OnUsed = function(button, ply)
+        print("power switch OnUsed debug start")
         if newPowerSwitch.powerSwitchDelay or !ply then return end
 
         if !powerSwitchUsed then
@@ -955,9 +984,11 @@ function mapscript.OnGameBegin()
 
         local reteleportTime = math.random(30, 45)
         if lightOptions.light1 == lightOptions[TeleportVariance].light1 and lightOptions.light2 == lightOptions[TeleportVariance].light2 then
+            print("debug 1", possibleTeleports.pap)
             SpecialTeleport(ply, possibleTeleports.pap.pos, possibleTeleports.pap.ang, 1)
             reteleportTime = math.random(45, 60)
         else
+            print("debug 2", possibleTeleports.default)
             SpecialTeleport(ply, possibleTeleports.default.pos, possibleTeleports.default.ang)
         end
         
@@ -975,6 +1006,7 @@ function mapscript.OnGameBegin()
                 if teleportTimers[ply:SteamID()] == 0 or !ply:GetNotDowned() then
                     timer.Remove(ply:SteamID() .. "TeleportTimer")
                     local randnum = math.random(#possibleTeleports.post)
+                    print("debug 3", possibleTeleports.post, randnum, possibleTeleports.post[randnum])
                     SpecialTeleport(ply, possibleTeleports.post[randnum].pos, possibleTeleports.post[randnum].ang)
                     net.Start("UpdateTeleportTimer")
                         net.WriteInt(0, 16)
@@ -987,7 +1019,7 @@ function mapscript.OnGameBegin()
                 net.Send(ply)
             end)
         end)
-        return true
+        --return true
 	end
 
     --Creates the elevator generator
@@ -1065,12 +1097,11 @@ function mapscript.OnGameBegin()
     end
 
     --Sets up the map-spawned consoles to disable "system lockdown" which re-kills power
-    mapscript.consoleButtons = {"1455", "2056", "1359", pressed = 0, ents = {}}
+    mapscript.consoleButtons = {"1455", "2056", pressed = 0}
     for k, v in ipairs(mapscript.consoleButtons) do
         local console = ents.GetMapCreatedEntity(v)
         console:SetNWString("NZText", "Power must be activated")
         mapscript.consoleButtons[v] = false
-        table.Add(mapscript.consoleButtons.ents, console)
         console.OnUsed = function()
             if nzElec:IsOn() and !mapscript.consoleButtons[v] then
                 mapscript.consoleButtons[v] = true
@@ -1079,11 +1110,11 @@ function mapscript.OnGameBegin()
                 console:EmitSound("buttons/button4.wav")
                 if mapscript.consoleButtons.pressed == 2 then
                     timer.Simple(1, function()
-                        local throwawayTab = {1, 3, 4}
+                        --[[local throwawayTab = {1, 3, 4}
                         net.Start("RunSound")
                             net.WriteString("ambient/machines/teleport" .. throwawayTab[math.random(#throwawayTab)] .. ".wav")
-                        net.Broadcast()
-                        timer.Simple(1, function() nzElec:Reset())
+                        net.Broadcast()]]
+                        timer.Simple(1, function() nzElec:Reset() nzDoors:OpenLinkedDoors("ld") end)
                     end)
                 end
             end
@@ -1161,13 +1192,13 @@ function mapscript.ElectricityOn()
 
         local colorEditor = ents.FindByClass("edit_color")[1]
         local contrastScale = 0.5 --This is the value it's set to in the config, we scale this value up here
-        timer.Create("RemoveGrayscale", 0.5, 10, function()
-            contrastScale = contrastScale + 0.05
+        timer.Create("RemoveGrayscale", 0.25, 10, function()
+            contrastScale = contrastScale + 0.025
             colorEditor:SetContrast(contrastScale)
         end)
 
-        for k, v in pairs(mapscript.consoleButtons.ents) do
-            v:SetNWString("NZText", "Press E to rescind system lockdown")
+        for k, v in ipairs(mapscript.consoleButtons) do
+            ents.GetMapCreatedEntity(v):SetNWString("NZText", "Press E to rescind system lockdown")
         end
 
 		timer.Simple(5, function()
@@ -1359,3 +1390,4 @@ Useful EE function:
     Theory work:
     - Spawning a boss
         - ent:SetSequence() - Sets an animation on a model
+]]
