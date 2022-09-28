@@ -224,13 +224,21 @@ net.Receive("SendBatteryLevel", function()
 end)
 
 chalkMessages = {
-    --counter = {pos1 = Vector(-513.988129, 3552.188965, 161.082184), rot = Angle(0, 0, 0), msg = ""},
-    msg1 = {pos1 = Vector(-1664.031250, 2424.160400, 112.724030), rot = Angle(0, 270, 0), msg = "I HUNGER"},
-   -- msg2 = {pos1 = Vector(-1160.546265, 2368.251465, 138.644363), rot = Angle(0, 180, 0), msg = {"   ARCS OF BLUE", "MAKE IT TRUE"}},
-    msg3 = {pos1 = Vector(-1216.598877, 2771.254150, 137.531754), rot = Angle(0, 90, 0), msg = {"BRING FORTH", "          THE   LAMBS", "               TO     SLAUGHTER"}},
-    msg4 = {pos1 = Vector(-4039.113037, 1984.031250, 122.161331), rot = Angle(0, 180, 0), msg = {"WITHOUT A TORCH", "    A SOUL IS LOST"}},
-    msg5 = {pos1 = Vector(-3071.968750, 1413.312500, 109.798767), rot = Angle(0, 90, 0), msg = "I REMAIN YET UNSATISFIED"},
-    msg6 = {pos1 = Vector(-320.598755, 3618.671143, 112.714233), rot = Angle(0, 90, 0), msg = {"THE     STRAIN", "  BRINGS", "  IT DOWN"}}
+    --[[{pos1 = Vector(-1664.031250, 2424.160400, 112.724030), rot = Angle(0, 270, 0), msg = "I HUNGER"},
+    {pos1 = Vector(-1216.598877, 2771.254150, 137.531754), rot = Angle(0, 90, 0), msg = {"BRING FORTH", "          THE   LAMBS", "               TO     SLAUGHTER"}},
+    {pos1 = Vector(-4039.113037, 1984.031250, 122.161331), rot = Angle(0, 180, 0), msg = {"WITHOUT A TORCH", "    A SOUL IS LOST"}},
+    {pos1 = Vector(-3071.968750, 1413.312500, 109.798767), rot = Angle(0, 90, 0), msg = "I REMAIN YET UNSATISFIED"},
+    {pos1 = Vector(-320.598755, 3618.671143, 112.714233), rot = Angle(0, 90, 0), msg = {"THE     STRAIN", "  BRINGS", "  IT DOWN"}}]]
+    {pos1 = Vector(), rot = Angle(), msg = {"WITHOUT A TORCH", "       A SOUL IS LOST"}}, --Hallway toward shower
+    {pos1 = Vector(), rot = Angle(), msg = {"BEWARE", "I LIVE"}}, --Outside before entering building
+    {pos1 = Vector(), rot = Angle(), msg = {"BRING FORTH", "          THE   LAMBS", "               TO     SLAUGHTER"}}, --Before the poison hallway
+    {pos1 = Vector(), rot = Angle(), msg = "I HUNGER"},
+    {pos1 = Vector(), rot = Angle(), msg = "DIE"},
+    {pos1 = Vector(), rot = Angle(), msg = "TURN BACK"},
+    {pos1 = Vector(), rot = Angle(), msg = {"RUNNING ONLY  DELAYS", "    THE INEVITABLE"}},
+    {pos1 = Vector(), rot = Angle(), msg = ""},
+    {pos1 = Vector(), rot = Angle(), msg = ""},
+    {pos1 = Vector(), rot = Angle(), msg = ""}
 }
 chalkBackup = table.Copy(chalkMessages)
 

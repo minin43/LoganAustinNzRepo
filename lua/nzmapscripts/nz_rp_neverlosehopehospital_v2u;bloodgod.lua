@@ -29,7 +29,7 @@ util.AddNetworkString("ResetChalkMessages")
     1. Effigy buildtable
     2. Escape functionality block (including opening the door)
     3. Still feels like the spawn system kinda jank, I must be missing some spawns
-    4. Electrify isn't working correctly? It's been disabled everywhere
+    4. Electrify isn't working correctly? It's been disabled everywhere, might have something to do with map-spawned entities?
     5. Gas generator plays humming sounds but not map-spawned backup generator
     8. Need to add sp00ky wall text everywhere to indicate clues
         a. Only seems to work sometimes? I believe the hook is being overridden somewhere
@@ -436,45 +436,45 @@ escapeDetector.StartTouch = MyStartTouch
 
 --IN NEED OF HEAVY UPDATING
 local finalround = 0
-local function MyStartTouch( self, ply )
+local function MyStartTouch(self, ply)
 	if not ply:IsPlayer() and not ply:Alive() then return end
 	finalround = nzRound:GetNumber()
 	local escaped, escapednames = {}, {}
-	ply:GodEnable() --Because cheeky nandos will try to break immersion by throwing explosives into the end area
-	ply:SetTargetPriority( TARGET_PRIORITY_NONE )
-	ply:Freeze( true )
-	--//It was suggested to use GetAllPlayingAndAlive, but I want to avoid spectators doing nothing waiting for game to end
+	ply:GodEnable()
+	ply:SetTargetPriority(TARGET_PRIORITY_NONE)
+	ply:Freeze(true)
+    
 	if #player.GetAll() == 1 then
-		nzEE.Cam:QueueView( 1, nil, nil, nil, true, nil, ply ) --Fade for aesthetics
-		nzEE.Cam:QueueView( 15, Vector( -400.915161, -1325.068115, -380.741180 ), nil, Angle( 0.000, 91.500, 0.000 ), nil, nil, ply ) --Black screen
-		nzEE.Cam:Music( "nz/easteregg/motd_good.wav", ply )
-		nzEE.Cam:Text( "You escaped after ".. finalround .." rounds!", ply )
+		nzEE.Cam:QueueView(1, nil, nil, nil, true, nil, ply) --Fade
+		nzEE.Cam:QueueView(15, Vector(), nil, Angle(), nil, nil, ply) --Pull their screen to a black part of the map
+		nzEE.Cam:Music("nz/easteregg/motd_good.wav", ply)
+		nzEE.Cam:Text("You defeated the boss after ".. finalround .." rounds!", ply)
 		--nzEE.Cam:QueueView( 0, Vector(  ), nil, Angle(  ), nil, nil, ply ) --Final Scene
-		timer.Simple( 16, function()
-			nzRound:Win( "Congratulations on escaping!", false )
+		timer.Simple(16, function()
+			nzRound:Win("Congratulations!", false)
 			if ply:Alive() then ply:KillSilent() end
-			ply:Freeze( false )
-			ply:SetTargetPriority( TARGET_PRIORITY_PLAYER )
+			ply:Freeze(false)
+			ply:SetTargetPriority(TARGET_PRIORITY_PLAYER)
+            ply:GodDisable()
 		end )
 		nzEE.Cam:Begin()
 		return
 	end
-	if not timer.Exists( "EscapeTimer" ) then
-		timer.Create( "EscapeTimer", 30, 1, function()
-			nzRound:Freeze( true )
-			--//nzEE includes capability to target every player, but that leaves me without a way to target the players for Freezing and SetTargetPriority
-			--//I don't know if including every nzEE function within the k, v is more or less efficient than not
-			for k, v in pairs( player.GetAll() ) do
-				v:Freeze( true )
-				v:SetTargetPriority( TARGET_PRIORITY_NONE )
-				nzEE.Cam:QueueView( 1, nil, nil, nil, true, nil, ply ) --Fade for aesthetics
-				nzEE.Cam:QueueView( 15, Vector( -1243.480469, 668.968994, -176.465607 ), Vector( -1250.941895, -1273.481445, -164.941498 ), Angle( 0.000, -89.560, 0.000 ), true, nil, ply )
+
+	if not timer.Exists("EscapeTimer") then
+		timer.Create("EscapeTimer", 30, 1, function()
+			nzRound:Freeze(true)
+			for k, v in pairs(player.GetAll()) do
+				v:Freeze(true)
+				v:SetTargetPriority(TARGET_PRIORITY_NONE)
+				nzEE.Cam:QueueView(1, nil, nil, nil, true, nil, ply) --Fade for aesthetics
+				nzEE.Cam:QueueView(15, Vector(), Vector(), Angle(), true, nil, ply )
 				if not escaped[ ply ] then
-					nzEE.Cam:Music( "nz/easteregg/motd_bad.wav", ply )
-					nzEE.Cam:Text( "You did not escape the facility...", ply )
+					nzEE.Cam:Music("nz/easteregg/motd_bad.wav", ply)
+					nzEE.Cam:Text("You lost all hope...", ply)
 				else
-					nzEE.Cam:Music( "nz/easteregg/motd_good.wav", ply )
-					nzEE.Cam:Text( "You escaped after ".. finalround .." rounds!", ply )
+					nzEE.Cam:Music("nz/easteregg/motd_good.wav", ply)
+					nzEE.Cam:Text("You defeated the boxx after ".. finalround .." rounds!", ply)
 				end
 				--[[nzEE.Cam:QueueView( 15, Vector(  ), Vector(  ), Angle(  ), true, nil, ply ) --Pan 1
 				nzEE.Cam:Text( "Escapees: " .. table.concat( escapednames, ", " ) .. ".", ply ) 
@@ -482,11 +482,11 @@ local function MyStartTouch( self, ply )
 				nzEE.Cam:Text( "Thank you for playing!", ply )
 				nzEE.Cam:QueueView( 0, Vector(  ), Vector(  ), Angle(  ), true, nil, ply ) --Final Scene]]
 			end
-			timer.Simple( 46, function() --After 20 more seconds, actually end the game
-				nzRound:Win( "Congratulations to everyone who escaped!", false )
+			timer.Simple(46, function() --After 20 more seconds, actually end the game
+				nzRound:Win("Congratulations to everyone who escaped!", false)
 				for k, v in pairs( player.GetAllPlayingAndAlive() ) do
-					v:Freeze( false )
-					v:SetTargetPriority( TARGET_PRIORITY_PLAYER )
+					v:Freeze(false)
+					v:SetTargetPriority(TARGET_PRIORITY_PLAYER)
 					if v:Alive() then v:KillSilent() end
 				end
 			end )
@@ -494,11 +494,11 @@ local function MyStartTouch( self, ply )
 		end )
 	end
 
-	nzEE.Cam:QueueView( timer.TimeLeft( "EscapeTimer" ), Vector( -400.915161, -1325.068115, -380.741180 ), nil, Angle( 0.000, 91.500, 0.000 ), true, nil, ply )
-	nzEE.Cam:Text( "Waiting for the rest of the players...", ply )
-	PrintMessage( HUD_PRINTTALK, ply:Nick() .. " has escaped the map! All remaining players have " .. math.Round( timer.TimeLeft( "EscapeTimer" ) ) .. " seconds to follow suit!" ) --This should always be 30 the first time
-	escaped[ ply ] = true --Used for logic
-	table.insert( escapednames, ply:Nick() ) --Used for the end message
+	nzEE.Cam:QueueView(timer.TimeLeft( "EscapeTimer" ), Vector(), nil, Angle(), true, nil, ply ) --Final overview location (note only 1 vector)
+	nzEE.Cam:Text("Waiting for the rest of the players...", ply)
+	PrintMessage(HUD_PRINTTALK, ply:Nick() .. " has escaped the map! All remaining players have " .. math.Round( timer.TimeLeft( "EscapeTimer" ) ) .. " seconds to follow suit!")
+	escaped[ply] = true --Used for logic
+	table.insert(escapednames, ply:Nick())
 	nzEE.Cam:Begin()
 end
 
