@@ -22,20 +22,20 @@ local jars = {
 }
 
 local jardepository = {
-    {pos = Vector(-1111.5, 1985, 130), rot = Angle(0.000, 0.000, 0.000), mdl = "models/props_c17/concrete_barrier001a.mdl"},
-    {pos = Vector(-1143, 1985, 130), rot = Angle(0.000, 0.000, 0.000), mdl = "models/props_c17/concrete_barrier001a.mdl"},
-    {pos = Vector(-1127.5, 1952, 174), rot = Angle(0.000, 0.000, -0.000), mdl = "models/props_junk/metalbucket02a.mdl", usable = true},
-    {pos = Vector(-1127.5, 2018.5, 174), rot = Angle(0.000, 0.000, -0.000), mdl = "models/props_junk/metalbucket02a.mdl", usable = true},
-    {pos = Vector(-1127.8, 1985.9, 154.8), rot = Angle(0.000, 90.000, 0.000), mdl = "models/props_lab/filecabinet02.mdl"},
-    {pos = Vector(-1107.3, 1989.6, 256.5), rot = Angle(-90.000, -0.000, 180.000), mdl = "models/props_junk/trashdumpster02b.mdl"}
+    {pos = Vector(-1111.5, 1985, 130), ang = Angle(0.000, 0.000, 0.000), mdl = "models/props_c17/concrete_barrier001a.mdl"},
+    {pos = Vector(-1143, 1985, 130), ang = Angle(0.000, 0.000, 0.000), mdl = "models/props_c17/concrete_barrier001a.mdl"},
+    {pos = Vector(-1127.5, 1952, 174), ang = Angle(0.000, 0.000, -0.000), mdl = "models/props_junk/metalbucket02a.mdl", usable = true},
+    {pos = Vector(-1127.5, 2018.5, 174), ang = Angle(0.000, 0.000, -0.000), mdl = "models/props_junk/metalbucket02a.mdl", usable = true},
+    {pos = Vector(-1127.8, 1985.9, 154.8), ang = Angle(0.000, 90.000, 0.000), mdl = "models/props_lab/filecabinet02.mdl"},
+    {pos = Vector(-1107.3, 1989.6, 256.5), ang = Angle(-90.000, -0.000, 180.000), mdl = "models/props_junk/trashdumpster02b.mdl"}
 }
 local placedjars = {
-    {pos = Vector(-1127.5, 2026, 171), rot = Angle(0.000, 90.000, -0.000), mdl = "models/props/spookington/eyejar.mdl"},
-    {pos = Vector(-1127.5, 2010.5, 171), rot = Angle(0.000, -177.360, 0.000), mdl = "models/props/spookington/eyejar.mdl"},
-    {pos = Vector(-1127.5, 1960.5, 171), rot = Angle(0.000, 92.200, 0.000), mdl = "models/props/spookington/eyejar.mdl"},
-    {pos = Vector(-1127.5, 1944, 171), rot = Angle(0.000, 63.460, 0.000), mdl = "models/props/spookington/eyejar.mdl"}
+    {pos = Vector(-1127.5, 2026, 171), ang = Angle(0.000, 90.000, -0.000), mdl = "models/props/spookington/eyejar.mdl"},
+    {pos = Vector(-1127.5, 2010.5, 171), ang = Angle(0.000, -177.360, 0.000), mdl = "models/props/spookington/eyejar.mdl"},
+    {pos = Vector(-1127.5, 1960.5, 171), ang = Angle(0.000, 92.200, 0.000), mdl = "models/props/spookington/eyejar.mdl"},
+    {pos = Vector(-1127.5, 1944, 171), ang = Angle(0.000, 63.460, 0.000), mdl = "models/props/spookington/eyejar.mdl"}
 }
-local hintbust = {pos = Vector(-1127, 1987, 184.7), rot = Angle(0.000, 0.000, 0.000), mdl = "models/props_combine/breenbust.mdl"}
+local hintbust = {pos = Vector(-1127, 1987, 184.7), ang = Angle(0.000, 0.000, 0.000), mdl = "models/props_combine/breenbust.mdl"}
 
 local mapscript = {}
 
@@ -96,19 +96,47 @@ function mapscript.OnGameBegin()
         ent:Spawn()
     end
 
-    for _, id in pairs(busts) do
-        local ent = ents.GetMapCreatedEntity(id)
-        print(ent, ent.OnTakeDamage)
-        ent.OnTakeDamage = function(_, dmginfo)
-            -- This isn't working
-            print(dmginfo:GetDamageType())
-            if !dmginfo or !dmginfo:GetAttacker():IsPlayer() or !dmginfo:IsDamageType(DMG_SLASH) then return end
+    for _, tab in pairs(jardepository) do
+        local ent = ents.Create("nz_script_prop")
+        ent:SetModel(tab.mdl)
+        ent:SetPos(tab.pos)
+        ent:SetAngles(tab.ang)
+        ent:Spawn()
 
-            --Play some sound?
-            --Emit some particles?
-            --Do something EE related?
+        if ent.usable then
+            ent:SetNWString("NZText", "Looks hungry for some eyes")
+            ent:SetNWString("NZRequiredItem", "eyeballs")
+		    ent:SetNWString("NZHasText", "Press E to add some eyeballs")
+
+            ent.OnUsed = function(self, ply)
+                if ply:HasCarryItem("eyeballs") then
+                    for k, v in pairs(placedjars) do
+                        if !v.placed then
+                            v.placed = true
+                            
+                            --Play nuckle crack animation
+
+                            local ent2 = ents.Create("nz_script_prop")
+                            ent2:SetModel(v.mdl)
+                            ent2:SetPos(v.pos)
+                            ent2:SetAngles(v.ang)
+                            ent2:Spawn()
+
+                            for k2, v2 in pairs(placedjars) do
+                                if !v.placed then
+                                    break
+                                end
+                            end
+
+                            ElectrifyBusts()
+                            break
+                        end
+                    end
+
+                    ply:RemoveCarryItem("eyeballs")
+                end
+            end
         end
-        print("\t", ent.OnTakeDamage)
     end
 end
 
@@ -118,5 +146,35 @@ hook.Add("EntityTakeDamage", "BustTakesDamage", function(ent, dmginfo)
         print(dmginfo:GetDamageType())
     end
 end)
+
+function ElectrifyBusts()
+
+end
+
+--//Creates the lightning aura once around the given ent
+function Electrify( ent )
+	local effect = EffectData()
+	effect:SetScale( 1 )
+	effect:SetEntity( ent )
+	util.Effect( "lightning_aura", effect )
+end
+
+--//Creates a never-ending lightning aura around the given ent
+function SetPermaElectrify( penis )
+	local function PermaElectrify( ent )
+		if not game.active then --Find the appropriate variable/function return
+			return false
+		end
+		local effecttimer = 0
+		if effecttimer < CurTime() then
+			local effect = EffectData()
+			effect:SetScale( 1 )
+			effect:SetEntity( ent )
+			util.Effect( "lightning_aura", effect )
+			effecttimer = CurTime() + 1
+		end
+	end
+	penis.Think = PermaElectrify
+end
 
 return mapscript
